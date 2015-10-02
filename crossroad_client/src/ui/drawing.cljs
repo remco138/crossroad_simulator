@@ -3,7 +3,7 @@
 
 
 
-(defn init! [] (def  path1 (js/paper.Path.));(js-obj
+(defn init! [] (def  path1 (js/paper.Path.)));(js-obj
                                            ; "point" (array 75 75)
                                             ;"size" (array 75 75)
                                             ;"strokeColor" "black"))))
