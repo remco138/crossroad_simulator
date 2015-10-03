@@ -19,8 +19,6 @@
   (let [item js/paper.project]
     (print (.importSVG item url))))
 
-
-;(spawn-car!)
 (defn spawn-car! []
   (let [car (state/add-car-channel! (cars/random-car　(:roads @state/state)))]
     (cars/car-ai (:chan car) car 0)))
@@ -40,9 +38,7 @@
   (js/paper.setup(js/document.getElementById "mycanvas"))
   (set! js/paper.view.onFrame (var drawing/on-frame))
   (state/init!)
-  (drawing/init!)
-
-  )
+  (drawing/init!))
 
 (set! (.-onload js/window) (fn [] (init!)))
 

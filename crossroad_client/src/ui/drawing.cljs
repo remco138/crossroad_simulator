@@ -23,14 +23,3 @@
   (go
    (doseq [c @state/cars]
      (>! (:chan c) {:multiplier 0.1}))))
-
-
-;(print "aa")
-;todo:
-  ;map cars (chans) in on-frame
-  ;create (println) channel-code for car
-  ;push all info the channel might need
-  ;find way to keep state in channel (total ticks -> curve.at())
-
-  ;initialize car in channel
-  ;set its location

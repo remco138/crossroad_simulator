@@ -26,3 +26,10 @@
              (recur (inc tick)))))
 
 ;(car-ai (:chan (first @ui.state/cars)) (first @ui.state/cars) 0)
+
+
+;todo:
+;pass state of other cars
+;filter cars with roads that intersect (include own road)
+;check if overlap with getPointAt(tick + magicdistance)
+;->halt
