@@ -11,5 +11,5 @@ Uses [cargo](https://crates.io/) to build/test the app.
 Or to run it:
 
 ```sh
-$ cargo run
+ cargo run
 ```
