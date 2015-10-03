@@ -1,6 +1,6 @@
 (ns ui.drawing
   (:require
-   [ui.state :as state]
+   [state :as state]
    [cljs.core.async :as async :refer [chan close! >! <!]]
    [cljsjs.paperjs])
   (:require-macros
