@@ -1,15 +1,37 @@
 (ns ui.drawing
-  (:require [cljsjs.paperjs]))
+  (:require
+   [ui.state]
+   [cljsjs.paperjs]))
 
 
 
-(defn init! [] (def  path1 (js/paper.Path.)));(js-obj
-                                           ; "point" (array 75 75)
-                                            ;"size" (array 75 75)
-                                            ;"strokeColor" "black"))))
+(defn init! []
+  (def path1 (js/paper.Path. "M -13.143726,172.741 C 464.44011,272.77115 400.8466,168.08815 365.55987,456.15259"))
+  (def path2 (js/paper.Path. "M -4.9288972,162.88321 697.30508,278.85324 965.99691,293.64823"))
+  (def path3 (js/paper.Path. "M 393.49029,454.50962 462.49485,3.5155303"))
+  (def path4 (js/paper.Path. "M -2.3235043,191.89526 C 441.78778,275.68235 414.93451,239.97297 663.84169,290.02204 c 103.8881,20.88932 298.71124,12.43899 298.71124,12.43899"))
+  (set! (.-strokeColor path1) "black")
+  (set! (.-strokeColor path2) "black")
+  (set! (.-strokeColor path3) "black")
+  (set! (.-strokeColor path4) "black")
 
+
+   )
+
+;(js/paper.Path.Rectangle. (js/paper.Point. 200 200) (js/paper.Point 50. 50))
 
 
 (defn on-frame []
-  (.rotate path1 9))
+  ())
 
+
+
+;todo:
+  ;put example cars in state
+  ;map cars (chans) in on-frame
+  ;create (println) channel-code for car
+  ;push all info the channel might need
+  ;find way to keep state in channel (total ticks -> curve.at())
+
+  ;initialize car in channel
+  ;set its location

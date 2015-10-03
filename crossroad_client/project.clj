@@ -4,6 +4,7 @@
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.48"]
                  [figwheel "0.3.7"]
+                 [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [reagent "0.5.0"]
                  [ring/ring-core "1.4.0"]
                  [cljsjs/paperjs "0.9.24-0"]

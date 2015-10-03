@@ -1,11 +1,14 @@
 (ns ui.core
-  (:require [figwheel.client :as fw :include-macros true]
+  (:require
+
+   [figwheel.client :as fw :include-macros true]
             [reagent.core :as reagent :refer [atom]]
             [clojure.string :as string :refer [split-lines]]
             [cljsjs.paperjs]
 
+            [ui.state :as state]
             [ui.drawing :as drawing]
-            ;[ui.cars]
+            [ui.cars :as cars]
             ))
 
 (enable-console-print!)
@@ -14,8 +17,7 @@
 
 (defn parse-svg [url]
   (let [item js/paper.project]
-    (.importSVG item url)
-    item))
+    (print (.importSVG item url))))
 
 
 (defn spawn-car [road-name]
@@ -24,8 +26,7 @@
 (defn root-component []
   [:div
    [:canvas {:id "mycanvas" :width "967" :height "459"}]
-   ;[:object {:id "svghere" :data "map3.svg" :type "image/svg+xml"}]
-   [:button  {:on-click #(println "works")} "yeee boiii. add 5 cars"]
+   [:button  {:on-click #(println (cars/random-car　(:roads @state/state)))} "yeee boiii. add a car"]
   ])
 
 (reagent/render
@@ -36,7 +37,6 @@
 (defn init! []
   (js/paper.setup(js/document.getElementById "mycanvas"))
   (set! js/paper.view.onFrame (var drawing/on-frame))
-  ;(parse-svg "map3.svg")
   (drawing/init!)
   )
 
