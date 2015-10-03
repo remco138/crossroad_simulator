@@ -21,23 +21,23 @@ use crossroad_server::error::{Result, Error, JsonError};
 
 
 fn main() {
-	run_server("127.0.0.1:80").unwrap();	
+    run_server("127.0.0.1:80").unwrap();    
 }
 
 fn run_server<A>(address: A) -> io::Result<()> where A: ToSocketAddrs + Display {
 
-	let listener = try!(TcpListener::bind(&address));
-	println!("Server listening on: {}", address);
+    let listener = try!(TcpListener::bind(&address));
+    println!("Server listening on: {}", address);
 
-	// infinite loop
-	for tcp_stream in listener.incoming().filter_map(|i| i.ok()) {     
+    // infinite loop
+    for tcp_stream in listener.incoming().filter_map(|i| i.ok()) {     
         thread::spawn(move || {
             println!("Connecting a new client");
             handle_client(tcp_stream).unwrap();
         });
-	}
+    }
 
-	Ok(())
+    Ok(())
 }
 
 fn connect_to_client(client_stream: &TcpStream) -> io::Result<TcpStream> {

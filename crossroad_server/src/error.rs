@@ -13,7 +13,7 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 
 #[derive(Debug)]
 pub enum Error {
-	Io(IoError),
+    Io(IoError),
     Serde(SerdeError),
     SerdeJson(JsonError),
     Other(String),
