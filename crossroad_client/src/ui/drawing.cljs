@@ -1,10 +1,14 @@
 (ns ui.drawing
   (:require
-   [ui.state]
-   [cljsjs.paperjs]))
+   [ui.state :as state]
+   [cljs.core.async :as async :refer [chan close! >! <!]]
+   [cljsjs.paperjs])
+  (:require-macros
+   [cljs.core.async.macros :refer [go]]))
 
+(enable-console-print!)
 
-
+;display the lines (by setting strokeColor)
 (defn init! []
   (def path1 (js/paper.Path. "M -13.143726,172.741 C 464.44011,272.77115 400.8466,168.08815 365.55987,456.15259"))
   (def path2 (js/paper.Path. "M -4.9288972,162.88321 697.30508,278.85324 965.99691,293.64823"))
@@ -13,21 +17,16 @@
   (set! (.-strokeColor path1) "black")
   (set! (.-strokeColor path2) "black")
   (set! (.-strokeColor path3) "black")
-  (set! (.-strokeColor path4) "black")
-
-
-   )
-
-;(js/paper.Path.Rectangle. (js/paper.Point. 200 200) (js/paper.Point 50. 50))
-
+  (set! (.-strokeColor path4) "black"))
 
 (defn on-frame []
-  ())
+  (go
+   (doseq [c @state/cars]
+     (>! (:chan c) {:multiplier 0.1}))))
 
 
-
+;(print "aa")
 ;todo:
-  ;put example cars in state
   ;map cars (chans) in on-frame
   ;create (println) channel-code for car
   ;push all info the channel might need

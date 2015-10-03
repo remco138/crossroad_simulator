@@ -20,13 +20,15 @@
     (print (.importSVG item url))))
 
 
-(defn spawn-car [road-name]
-  ())
+;(spawn-car!)
+(defn spawn-car! []
+  (let [car (state/add-car-channel! (cars/random-car　(:roads @state/state)))]
+    (cars/car-ai (:chan car) car 0)))
 
 (defn root-component []
   [:div
    [:canvas {:id "mycanvas" :width "967" :height "459"}]
-   [:button  {:on-click #(println (cars/random-car　(:roads @state/state)))} "yeee boiii. add a car"]
+   [:button  {:on-click spawn-car!} "yeee boiii. add a car"]
   ])
 
 (reagent/render
@@ -37,7 +39,9 @@
 (defn init! []
   (js/paper.setup(js/document.getElementById "mycanvas"))
   (set! js/paper.view.onFrame (var drawing/on-frame))
+  (state/init!)
   (drawing/init!)
+
   )
 
 (set! (.-onload js/window) (fn [] (init!)))
