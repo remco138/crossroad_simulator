@@ -21,7 +21,7 @@
                 :optimizations :simple
                 :pretty-print true
                 }}
-    {:source-paths ["src/ui"],
+    {:source-paths ["src"],
      :id "frontend-dev",
      :compiler {:output-dir "resources/public/js/ui-out"
                 :output-to "resources/public/js/ui-core.js",

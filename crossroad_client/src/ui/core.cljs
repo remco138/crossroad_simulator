@@ -5,10 +5,10 @@
    [clojure.string :as string :refer [split-lines]]
    [cljsjs.paperjs]
 
-   [network :as network]
-   [state :as state]
-   [drawing :as drawing]
-   [cars :as cars]
+   [ui.network :as network]
+   [ui.state :as state]
+   [ui.drawing :as drawing]
+   [ui.cars :as cars]
    ))
 
 (enable-console-print!)
