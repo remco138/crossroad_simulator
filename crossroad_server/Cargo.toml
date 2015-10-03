@@ -1,0 +1,10 @@
+[package]
+name = "crossroad_server"
+version = "0.1.0"
+authors = ["Rutger Schoorstra <schoorstra_rutger@hotmail.com>"]
+
+[dependencies]
+serde = "0.6.0"
+serde_json = "0.6.0"
+serde_macros = "*"
+schedule_recv = "*"
