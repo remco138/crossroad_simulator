@@ -27,7 +27,7 @@
   [:div
    [:canvas {:id "mycanvas" :width "967" :height "459"}]
    [:button  {:on-click spawn-car!} "yeee boiii. add a car"]
-   [:button  {:on-click network/connect!} "(re)connect"]
+   [:button  {:on-click #(network/connect! 80)} "(re)connect"]
   ])
 
 (reagent/render
@@ -38,7 +38,7 @@
 (defn init! []
   (js/paper.setup(js/document.getElementById "mycanvas"))
   (set! js/paper.view.onFrame (var drawing/on-frame))
-  (network/connect! 9991)
+  (network/connect! 80)
   (state/init!)
   (drawing/init!))
 
