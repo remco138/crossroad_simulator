@@ -1,10 +1,14 @@
 (ns ui.cars
   (:require
+   [ui.state :as state]
    [cljsjs.paperjs]
    [cljs.core.async :as async :refer [chan close! >! <!]])
   (:require-macros
    [cljs.core.async.macros :refer [go-loop]]))
 
+;----------
+;Code related to car spawning
+;----------
 (defn- pick-random-road [roads]
   (let [kv (rand-nth (seq roads))]
     (merge (second kv) {:name (first kv)})))
@@ -18,14 +22,51 @@
     (set! (.-strokeColor car) "black")
     {:car car :road road}))
 
+;----------
+;Car AI
+;----------
+(defn destroy-car! [ch car]
+  (reset! state/cars (remove #(identical? car %) @state/cars))
+  (.remove (:car car))
+  (close! ch))
 
-(defn car-ai [ch car begin-tick]
-  (go-loop [tick 0]
-           (let [package (<! ch)]
-             (set! (.-position (:car car)) (.getPointAt (:path (:road car)) (/ tick 2)))
-             (recur (inc tick)))))
 
-;(car-ai (:chan (first @ui.state/cars)) (first @ui.state/cars) 0)
+(cars-on-road [{}{}])
+(defn cars-on-road [cars road-name]
+  ())
+
+(defn may-move? [car lights-state sensor-list]
+  (let [light-index (-> car :road :light)
+        light-state (nth lights-state light-index)
+        sensor (:point (sensor-list light-index))]
+    (not (and
+         ;the traffic light allows us to move (green/orange => 1, 2)
+         (== light-state 0)
+         ;we are not standing infront of the traffic light (by checking .contains of its sensor)
+         (.contains (:car car) (.-position sensor))
+         ))))
+
+
+
+(defn car-ai [ch car x]
+  (go-loop [x 0]
+           (let [data (<! ch)
+                 path (:path (:road car))]
+             (cond
+              ;end of life?
+              (>= x (.-length path))
+              (destroy-car! ch car)
+
+              ;are we allowed to move? traffic light? car infront? intersecting car nearby?
+              (may-move? car @state/lights (:sensors @state/state))
+              (do
+                (set! (.-position (:car car)) (.getPointAt path x))
+                (recur (+ x (:speed @state/ui-state))))
+
+              :default
+              (recur x)
+              ))))
+
 
 
 ;todo:

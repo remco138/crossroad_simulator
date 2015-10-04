@@ -28,6 +28,17 @@
    [:canvas {:id "mycanvas" :width "967" :height "459"}]
    [:button  {:on-click spawn-car!} "yeee boiii. add a car"]
    [:button  {:on-click #(network/connect! 80)} "(re)connect"]
+
+   [:input {:type "range"
+            :value (:speed @state/ui-state)
+            :min 0.1
+            :max 10
+            :step 0.1
+            :name "speed-slider"
+            :on-change (fn [x]
+                         (swap! state/ui-state assoc :speed (-> x .-target .-value js/parseFloat)))}]
+   [:span (:speed @state/ui-state)]
+
   ])
 
 (reagent/render

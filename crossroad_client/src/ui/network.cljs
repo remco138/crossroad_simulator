@@ -11,7 +11,7 @@
   (print data))
 
 (defn on-connect []
-  (.write client "<client>: hello")
+  (.write @client "<client>: hello")
   (print "we might have connected to the server and sent our greetings!"))
 
 (defn on-data [data]

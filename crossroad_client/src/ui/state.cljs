@@ -1,18 +1,30 @@
 (ns ui.state
   (:require [cljsjs.paperjs]
-             [cljs.core.async :as async :refer [chan close!]]))
+            [reagent.core :as r :refer [atom]]
+            [cljs.core.async :as async :refer [chan close!]]))
 
 ;example state
 (defn init! []
-  (def state (atom {:roads {:road1 {:path (js/paper.Path. "M -13.143726,172.741 C 464.44011,272.77115 400.8466,168.08815 365.55987,456.15259") :traffic-light "light1", :intersections [[1,1] [666,666] [999,999]]}
-                            :road2 {:path (js/paper.Path. "M -4.9288972,162.88321 697.30508,278.85324 965.99691,293.64823") :traffic-light "light2", :intersections [[444,444]]}
-                            :road3 {:path (js/paper.Path. "M 393.49029,454.50962 462.49485,3.5155303") :traffic-light "light2", :intersections [[444,444]]}
-                            :road4 {:path (js/paper.Path. "M -2.3235043,191.89526 C 441.78778,275.68235 414.93451,239.97297 663.84169,290.02204 c 103.8881,20.88932 298.71124,12.43899 298.71124,12.43899") :traffic-light "light2", :intersections [[444,444]]}}
-                    :nothing []})))
+  (def state (atom {:roads {"road0" {:path (js/paper.Path. "M -13.143726,172.741 C 464.44011,272.77115 400.8466,168.08815 365.55987,456.15259") :light 0}
+                            "road1" {:path (js/paper.Path. "M -4.9288972,162.88321 697.30508,278.85324 965.99691,293.64823") :light 1}
+                            "road2" {:path (js/paper.Path. "M 393.49029,454.50962 462.49485,3.5155303") :light 2}
+                            "road3" {:path (js/paper.Path. "M -2.3235043,191.89526 C 441.78778,275.68235 414.93451,239.97297 663.84169,290.02204 c 103.8881,20.88932 298.71124,12.43899 298.71124,12.43899") :light 3}}
+                    :traffic-lights {
+                                     0 {:point (js/paper.Path.Circle. (js/paper.Point. 363 242) 4)}
+                                     1 {:point (js/paper.Path.Circle. (js/paper.Point. 366 224) 4)}
+                                     2 {:point (js/paper.Path.Circle. (js/paper.Point. 363 250) 4)}
+                                     3 {:point (js/paper.Path.Circle. (js/paper.Point. 422 273) 4)}}
+
+                    :sensors {
+                              0 {:point (js/paper.Path.Circle. (js/paper.Point. 290 224))}
+                              1 {:point (js/paper.Path.Circle. (js/paper.Point. 292 211))}
+                              2 {:point (js/paper.Path.Circle. (js/paper.Point. 413 325))}
+                              3 {:point (js/paper.Path.Circle. (js/paper.Point. 289 241))}}
+                    })))
+(def ui-state (r/atom {:speed 3}))
 
 (def cars (atom []))
-
-
+(def lights (atom [0 0 1 2]))
 
 ;(add-car-channel! {:test "a"})
 (defn add-car-channel! [car]
