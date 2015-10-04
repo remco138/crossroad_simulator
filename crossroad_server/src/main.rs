@@ -110,8 +110,8 @@ fn spawn_client_sensor_receiver(mut reader: BufReader<TcpStream>, sensor_data: A
             let ref mut traffic_state = *sensor_data.lock().unwrap();               
 
             match traffic_state.update_from_json(&line) {
-                Ok(baan) => println!("Client->Server: received baan sensor update: {:?}", baan);
-                Err(err) => println!("Client->Server: received faulty json string {:?}\n{:?}", line, err);
+                Ok(baan) => println!("Client->Server: received baan sensor update: {:?}", baan),
+                Err(err) => println!("Client->Server: received faulty json string {:?}", line),
             }  
         }
     })
