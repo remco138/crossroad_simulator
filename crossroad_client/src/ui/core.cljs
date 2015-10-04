@@ -28,7 +28,7 @@
    [:canvas {:id "mycanvas" :width "967" :height "459"}]
    [:button  {:on-click spawn-car!} "yeee boiii. add a car"]
    [:button  {:on-click #(network/connect! 9990)} "(re)connect"]
-   [:button  {:on-click #(network/send! "ayyyyy")} "send data"]
+   [:button  {:on-click #(network/send! "ayyyyy\r\n")} "send data"]
 
    [:input {:type "range"
             :value (:speed @state/ui-state)
