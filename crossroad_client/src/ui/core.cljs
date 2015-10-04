@@ -27,7 +27,8 @@
   [:div
    [:canvas {:id "mycanvas" :width "967" :height "459"}]
    [:button  {:on-click spawn-car!} "yeee boiii. add a car"]
-   [:button  {:on-click #(network/connect! 80)} "(re)connect"]
+   [:button  {:on-click #(network/connect! 9990)} "(re)connect"]
+   [:button  {:on-click #(network/send! "ayyyyy")} "send data"]
 
    [:input {:type "range"
             :value (:speed @state/ui-state)
@@ -49,7 +50,7 @@
 (defn init! []
   (js/paper.setup(js/document.getElementById "mycanvas"))
   (set! js/paper.view.onFrame (var drawing/on-frame))
-  (network/connect! 80)
+  (network/connect! 9990)
   (state/init!)
   (drawing/init!))
 

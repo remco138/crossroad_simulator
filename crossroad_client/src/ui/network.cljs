@@ -7,6 +7,9 @@
 
 (defonce client (atom nil))
 
+(defn send! [data]
+  (.write @client data))
+
 (defn on-receive [data]
   (print data))
 
