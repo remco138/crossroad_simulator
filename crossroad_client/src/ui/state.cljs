@@ -1,8 +1,10 @@
 (ns ui.state
   (:require [cljsjs.paperjs]
             [reagent.core :as r :refer [atom]]
-            [cljs.core.async :as async :refer [chan close!]]))
+            [cljs.core.async :as async :refer [chan close! dropping-buffer]]))
 
+(declare state)
+(declare sensors-chan)
 ;example state
 (defn init! []
   (def state (atom {:roads {"road0" {:path (js/paper.Path. "M -13.143726,172.741 C 464.44011,272.77115 400.8466,168.08815 365.55987,456.15259") :light 0}
@@ -14,13 +16,15 @@
                                      1 {:point (js/paper.Path.Circle. (js/paper.Point. 366 224) 4)}
                                      2 {:point (js/paper.Path.Circle. (js/paper.Point. 363 250) 4)}
                                      3 {:point (js/paper.Path.Circle. (js/paper.Point. 422 273) 4)}}
-
                     :sensors {
-                              0 {:point (js/paper.Path.Circle. (js/paper.Point. 290 224))}
-                              1 {:point (js/paper.Path.Circle. (js/paper.Point. 292 211))}
-                              2 {:point (js/paper.Path.Circle. (js/paper.Point. 413 325))}
-                              3 {:point (js/paper.Path.Circle. (js/paper.Point. 289 241))}}
-                    })))
+                              0 {:point (js/paper.Path.Circle. (js/paper.Point. 290 224)) :chan (chan (dropping-buffer 1))}
+                              1 {:point (js/paper.Path.Circle. (js/paper.Point. 292 211)) :chan (chan (dropping-buffer 1))}
+                              2 {:point (js/paper.Path.Circle. (js/paper.Point. 413 325)) :chan (chan (dropping-buffer 1))}
+                              3 {:point (js/paper.Path.Circle. (js/paper.Point. 289 241)) :chan (chan (dropping-buffer 1))}}}))
+
+  (def sensors-chan (atom (async/merge (map #(-> % val :chan) (:sensors @state))))))
+
+
 (def ui-state (r/atom {:speed 3}))
 
 (def cars (atom []))

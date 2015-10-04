@@ -2,9 +2,9 @@
   (:require
    [ui.state :as state]
    [cljsjs.paperjs]
-   [cljs.core.async :as async :refer [chan close! >! <!]])
+   [cljs.core.async :as async :refer [chan close! >! <! put!]])
   (:require-macros
-   [cljs.core.async.macros :refer [go-loop]]))
+   [cljs.core.async.macros :refer [go-loop go]]))
 
 ;----------
 ;Code related to car spawning
@@ -31,9 +31,15 @@
   (close! ch))
 
 
-(cars-on-road [{}{}])
-(defn cars-on-road [cars road-name]
-  ())
+;(cars-on-road [{}{}])
+;(defn cars-on-road [cars road-name]
+;  ())
+(defn trigger-sensors! [car sensor-list]
+  (let [index (-> car :road :light)
+        sensor (sensor-list index)]
+    (when (.contains (:car car) (.-position (:point sensor)))
+          (go (>! (:chan sensor) index)))))
+
 
 (defn may-move? [car lights-state sensor-list]
   (let [light-index (-> car :road :light)
@@ -51,16 +57,18 @@
 (defn car-ai [ch car x]
   (go-loop [x 0]
            (let [data (<! ch)
-                 path (:path (:road car))]
+                 path (:path (:road car))
+                 sensors (:sensors @state/state)]
              (cond
               ;end of life?
               (>= x (.-length path))
               (destroy-car! ch car)
 
               ;are we allowed to move? traffic light? car infront? intersecting car nearby?
-              (may-move? car @state/lights (:sensors @state/state))
+              (may-move? car @state/lights sensors)
               (do
                 (set! (.-position (:car car)) (.getPointAt path x))
+                (trigger-sensors! car sensors)
                 (recur (+ x (:speed @state/ui-state))))
 
               :default

@@ -9,6 +9,7 @@
    [ui.state :as state]
    [ui.drawing :as drawing]
    [ui.cars :as cars]
+   [ui.sensors :as sensors]
    ))
 
 (enable-console-print!)
@@ -52,7 +53,8 @@
   (set! js/paper.view.onFrame (var drawing/on-frame))
   (network/connect! 9990)
   (state/init!)
-  (drawing/init!))
+  (drawing/init!)
+  (sensors/track-sensors!))
 
 (set! (.-onload js/window) (fn [] (init!)))
 
