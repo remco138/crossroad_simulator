@@ -1,7 +1,7 @@
 (ns ui.state
   (:require [cljsjs.paperjs]
             [reagent.core :as r :refer [atom]]
-            [cljs.core.async :as async :refer [chan close! dropping-buffer]]))
+            [cljs.core.async :as async :refer [chan close! dropping-buffer sliding-buffer]]))
 
 (declare state)
 (declare sensors-chan)
@@ -17,18 +17,18 @@
                                      2 {:point (js/paper.Path.Circle. (js/paper.Point. 363 250) 4)}
                                      3 {:point (js/paper.Path.Circle. (js/paper.Point. 422 273) 4)}}
                     :sensors {
-                              0 {:point (js/paper.Path.Circle. (js/paper.Point. 290 224)) :chan (chan (dropping-buffer 1))}
-                              1 {:point (js/paper.Path.Circle. (js/paper.Point. 292 211)) :chan (chan (dropping-buffer 1))}
-                              2 {:point (js/paper.Path.Circle. (js/paper.Point. 413 325)) :chan (chan (dropping-buffer 1))}
-                              3 {:point (js/paper.Path.Circle. (js/paper.Point. 289 241)) :chan (chan (dropping-buffer 1))}}}))
+                              0 {:point (js/paper.Path.Circle. (js/paper.Point. 290 224) 4) :chan (chan (dropping-buffer 1))}
+                              1 {:point (js/paper.Path.Circle. (js/paper.Point. 292 211) 4) :chan (chan (dropping-buffer 1))}
+                              2 {:point (js/paper.Path.Circle. (js/paper.Point. 413 325) 4) :chan (chan (dropping-buffer 1))}
+                              3 {:point (js/paper.Path.Circle. (js/paper.Point. 289 241) 4) :chan (chan (dropping-buffer 1))}}}))
 
-  (def sensors-chan (atom (async/merge (map #(-> % val :chan) (:sensors @state))))))
+  (comment (def sensors-chan (atom (async/merge (map #(-> % val :chan) (:sensors @state)))))))
 
 
 (def ui-state (r/atom {:speed 3}))
 
 (def cars (atom []))
-(def lights (atom [0 0 1 2]))
+(def lights (atom [1 1 1 2]))
 
 ;(add-car-channel! {:test "a"})
 (defn add-car-channel! [car]

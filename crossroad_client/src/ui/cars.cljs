@@ -18,7 +18,7 @@
 ;             :road2 {:path (js/paper.Path. "M -4.9288972,162.88321 697.30508,278.85324 965.99691,293.64823")}})
 (defn random-car [roads]
   (let [road (pick-random-road roads)
-        car (js/paper.Path.Circle. (.getPointAt (:path road) 5) 5)]
+        car (js/paper.Path.Circle. (.getPointAt (:path road) 0) 7)]
     (set! (.-strokeColor car) "black")
     {:car car :road road}))
 
