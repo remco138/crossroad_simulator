@@ -28,7 +28,7 @@
 (def ui-state (r/atom {:speed 3 :sensor-refresh 1000}))
 
 (def cars (atom []))
-(def lights (atom [1 1 1 2]))
+(def lights (atom [0 1 1 2]))
 
 ;(add-car-channel! {:test "a"})
 (defn add-car-channel! [car]
