@@ -30,7 +30,8 @@
    [:button  {:on-click spawn-car!} "yeee boiii. add a car"]
    [:button  {:on-click #(network/connect! 9990)} "(re)connect"]
    [:button  {:on-click #(network/send! "ayyyyy\r\n")} "send data"]
-
+   [:br]
+   [:span "car spee multiplier "]
    [:input {:type "range"
             :value (:speed @state/ui-state)
             :min 0.1
@@ -40,6 +41,17 @@
             :on-change (fn [x]
                          (swap! state/ui-state assoc :speed (-> x .-target .-value js/parseFloat)))}]
    [:span (:speed @state/ui-state)]
+      [:br]
+   [:span "sensor refresh rate "]
+      [:input {:type "range"
+            :value (:sensor-refresh @state/ui-state)
+            :min 100
+            :max 2000
+            :step 1
+            :name "sensor-refresh-rate"
+            :on-change (fn [x]
+                         (swap! state/ui-state assoc :sensor-refresh (-> x .-target .-value js/parseInt)))}]
+   [:span (:sensor-refresh @state/ui-state)]
 
   ])
 

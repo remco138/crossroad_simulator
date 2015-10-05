@@ -25,7 +25,7 @@
   (comment (def sensors-chan (atom (async/merge (map #(-> % val :chan) (:sensors @state)))))))
 
 
-(def ui-state (r/atom {:speed 3}))
+(def ui-state (r/atom {:speed 3 :sensor-refresh 1000}))
 
 (def cars (atom []))
 (def lights (atom [1 1 1 2]))
