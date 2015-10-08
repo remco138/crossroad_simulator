@@ -27,6 +27,8 @@
 (defn root-component []
   [:div
    [:canvas {:id "mycanvas" :width "967" :height "459"}]
+   [:textarea {:id "logger":readOnly true :rows 5 :cols 30 :placeholder  "logger" :value (:last-packet @state/ui-state)}]
+   [:br]
    [:button  {:on-click spawn-car!} "yeee boiii. add a car"]
    [:button  {:on-click #(network/connect! 9990)} "(re)connect"]
    [:button  {:on-click #(network/send! "ayyyyy\r\n")} "send data"]

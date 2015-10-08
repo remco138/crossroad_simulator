@@ -1,5 +1,6 @@
 (ns ui.network
   (:require
+   [ui.state :as state]
    [cljs.nodejs :as node]))
 
 (def net (node/require "net"))
@@ -15,7 +16,9 @@
 
 (defn send! [data]
   (print "data sent: " data)
-  (.write @client data))
+  (swap! state/ui-state assoc :last-packet data)
+  (print (:last-packet @state/ui-state))
+  (comment (.write @client data)))
 
 (defn send-sensor-states! [xs]
   (send! (str (clj->json {:banen (reduce #(conj %1 {:id %2 :bezet true}) [] xs)}) "\n")))
