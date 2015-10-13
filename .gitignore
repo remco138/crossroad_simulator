@@ -5,3 +5,4 @@ ui-core.js
 *-init.clj
 figwheel_server.log
 Cargo.lock
+crossroad_client/.nrepl-port
