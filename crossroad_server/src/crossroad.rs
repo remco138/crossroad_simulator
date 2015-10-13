@@ -83,7 +83,7 @@ impl<'a> SignalGroup<'a> {
         match self.state {
 
             SignalGroupState::Start => {
-                println!("Start");
+                println!("=> Start");
 
                 for control in self.traffic_controls.iter() {
                     println!("---Send {:?} green state", control);
@@ -95,31 +95,30 @@ impl<'a> SignalGroup<'a> {
             },
 
             SignalGroupState::MinimalGreen { end_time: end } => {
-                println!("Green time {:?} > end: {:?} = {:?}", time, end, time >= end);
+                println!("=> Green time {:?} > end: {:?} = {:?}", time, end, time >= end);
 
                 if time >= end { Some(SignalGroupState::Green{ end_time: time + 7 }) }
                 else { None }
             },
 
             SignalGroupState::Green { end_time: end } => {
-                println!("Bezig time {:?} > end: {:?} = {:?}", time, end, time >= end);
+                println!("=> Bezig time {:?} > end: {:?} = {:?}", time, end, time >= end);
 
                 if time >= end { Some(SignalGroupState::Hiaat { end_time: time + 7 }) }
                 else { None }
             },
 
             SignalGroupState::Hiaat { end_time: end } => {
-                println!("Hiaat time ?");
-                Some(SignalGroupState::Done)
-            },
-
-            SignalGroupState::Done => {
-                println!("Group Done");
+                println!("=> Group Done");
 
                 for control in self.traffic_controls.iter() {
                     println!("---Send {:?} red state", control);
                 }
 
+                Some(SignalGroupState::Done)
+            },
+
+            SignalGroupState::Done => {
                 None
             }
         }
@@ -278,9 +277,18 @@ impl<'a> Crossroad<'a> {
             CrossroadState::PrimaryTraffic => {
                 println!("========== STATE: PrimaryTraffic (default state)");
 
-                // TODO: if secondary_roads == active => create signal group
+                let ref mut sensor_state = *sensor_shared_state.lock().unwrap();
 
-                Some(CrossroadState::CreateSignalGroup)
+                if sensor_state.has_any_active(&self.secondary_traffic) {
+                    Some(CrossroadState::CreateSignalGroup)
+                }
+                else if sensor_state.has_any_active(&self.primary_traffic) {
+                    //TODO: not needed, these should be on GREEN by default!
+                    Some(CrossroadState::CreateSignalGroup)
+                }
+                else {
+                    None
+                }
             },
 
             CrossroadState::CreateSignalGroup => {
@@ -293,7 +301,7 @@ impl<'a> Crossroad<'a> {
             },
 
             CrossroadState::SignalGroup(ref group) => {
-                println!("========== STATE: SignalGroup");
+                print!("========== STATE: SignalGroup ");
 
                 match group.run_loop(time, out_tx) {
                     Some(SignalGroupState::Done) => Some(CrossroadState::PrimaryTraffic),

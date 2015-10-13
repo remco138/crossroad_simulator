@@ -5,6 +5,7 @@ use std::fmt;
 use time;
 use std::collections::HashMap;
 use crossroad::*;
+use traffic_controls::*;
 
 pub const BAAN_COUNT: usize = 35; //TODO: REMOVE
 
@@ -14,32 +15,38 @@ pub const BAAN_COUNT: usize = 35; //TODO: REMOVE
 // -------------------------------------------------------------------------------
 
 pub struct SensorStates {
-    banen: [Sensor; BAAN_COUNT], //TODO: use Vec
+    sensors: [Sensor; BAAN_COUNT], //TODO: use Vec
 }
 
 impl SensorStates {
     pub fn new() -> SensorStates {
-        let mut inst = SensorStates { banen: [Sensor::new(); BAAN_COUNT] };
-        for i in 0..BAAN_COUNT {  inst.banen[i].id = i; }
+        let mut inst = SensorStates { sensors: [Sensor::new(); BAAN_COUNT] };
+        for i in 0..BAAN_COUNT {  inst.sensors[i].id = i; }
         inst
+    }
+
+    pub fn has_any_active(&self, controls: &Vec<&TrafficControl>) -> bool {
+        self.sensors.iter().any(|sensor| {
+            controls.iter().any(|control| control.has_id(sensor.id))
+        })
     }
 
     pub fn _debug_update_directly(&mut self, states: Vec<Sensor>) {
         for state in states.iter() {
-            self.banen[state.id].bezet = state.bezet;
+            self.sensors[state.id].bezet = state.bezet;
 
             if state.bezet {
-                self.banen[state.id].last_update = state.last_update;
+                self.sensors[state.id].last_update = state.last_update;
             }
         }
     }
 
     pub fn update(&mut self, banen_json: BanenJson) -> BanenJson {
-        for baan in banen_json.banen.iter() {
-            self.banen[baan.id].bezet = baan.bezet;
+        for sensor in banen_json.banen.iter() {
+            self.sensors[sensor.id].bezet = sensor.bezet;
 
-            if baan.bezet {
-                self.banen[baan.id].last_update = time::now();
+            if sensor.bezet {
+                self.sensors[sensor.id].last_update = time::now();
             }
         }
         banen_json
@@ -49,22 +56,15 @@ impl SensorStates {
         json_from_str(&json_str).map(|banen_json| self.update(banen_json))
     }
 
-    // pub fn is_bezet(&self, baan_id: usize) -> bool {
-    //     self.banen[baan_id].bezet
-    // }
-
     pub fn active_sensors(&self) -> Vec<&Sensor> {
-        self.banen.iter()
-            .filter(|b| b.bezet)
-            //.map(|x|*x)
-            .collect()
+        self.sensors.iter().filter(|b| b.bezet).collect()
     }
 }
 
 impl fmt::Debug for SensorStates {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for baan in self.banen.iter().filter(|b| b.bezet) {
-            try!(write!(f, "[{} bezet] ", baan.id))
+        for sensor in self.sensors.iter().filter(|b| b.bezet) {
+            try!(write!(f, "[{} bezet] ", sensor.id))
         }
         Ok(())
     }
