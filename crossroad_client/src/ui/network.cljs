@@ -3,7 +3,11 @@
    [ui.state :as state]
    [cljs.nodejs :as node]))
 
-(def net (node/require "net"))
+(defn only-node [f]
+  (when (undefined? cljs.node) f))
+
+
+(only-node #(def net (node/require "net")))
 
 (enable-console-print!)
 
@@ -35,7 +39,7 @@
 
 
 (defn connect! [port]
-  (print "connecting..")
-  (reset! client (.createConnection net port))
-  (.on @client "connect" on-connect)
-  (.on @client "data" on-data))
+  #(do (print "connecting..")
+       (reset! client (.createConnection net port))
+       (.on @client "connect" on-connect)
+       (.on @client "data" on-data)))
