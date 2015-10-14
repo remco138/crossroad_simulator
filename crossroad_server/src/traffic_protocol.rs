@@ -25,9 +25,9 @@ impl SensorStates {
         inst
     }
 
-    pub fn has_any_active(&self, controls: &Vec<&TrafficControl>) -> bool {
+    pub fn has_any_active(&self, controls: &Vec<&Control>) -> bool {
         self.sensors.iter().any(|sensor| {
-            controls.iter().any(|control| control.has_id(sensor.id))
+            controls.iter().any(|control| control.contains(sensor.id))
         })
     }
 
@@ -58,6 +58,19 @@ impl SensorStates {
 
     pub fn active_sensors(&self) -> Vec<&Sensor> {
         self.sensors.iter().filter(|b| b.bezet).collect()
+    }
+
+    pub fn active_and_longest_waiting(&self) -> Option<(&Sensor, Vec<&Sensor>)> {
+        let mut active_sensors = self.active_sensors();
+
+        active_sensors.iter()
+            .map(|x|*x)
+            .min_by(|b| b.last_update)
+            .map(|longest_waiting| {
+
+                active_sensors.retain(|&s| s.id != longest_waiting.id);
+                (longest_waiting, active_sensors)
+            })
     }
 }
 

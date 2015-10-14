@@ -86,9 +86,53 @@ fn spawn_main_loop( out_tx: Sender<String>,
     thread::spawn(move || {
 
         let traffic_lights = generate_traffic_lights();
-        let primary_road_east_2_3 = ParallelTrafficControl::from(vec![&traffic_lights[2], &traffic_lights[3]], traffic_lights[2].direction);
-        let primary_road_west_9_10 = ParallelTrafficControl::from(vec![&traffic_lights[9], &traffic_lights[10]], traffic_lights[9].direction);
-        let crossroad = Crossroad::new(&traffic_lights, &primary_road_east_2_3, &primary_road_west_9_10);
+        let traffic_light_controls = to_controls(&traffic_lights);
+
+        let primary_road_east_2_3 = &TrafficGroup::from(
+            vec![&traffic_lights[2], &traffic_lights[3]],
+            Direction::East);
+        let primary_road_east_2_3_g = Control::Group(primary_road_east_2_3);
+
+        let primary_road_west_9_10 = &TrafficGroup::from(
+            vec![&traffic_lights[9], &traffic_lights[10]],
+            Direction::West);
+        let primary_road_west_9_10_g = Control::Group(primary_road_west_9_10);
+
+        let west_byc_ped = &TrafficGroup::from(
+            vec![&traffic_lights[17],                         // bycicle
+                 &traffic_lights[23], &traffic_lights[25]],
+            Direction::West); // pedestrian
+
+        let west_inner = &TrafficGroup::with(
+            vec![&traffic_lights[24], &traffic_lights[26]]);
+
+        let south_byc_ped = &TrafficGroup::from(
+            vec![&traffic_lights[19], &traffic_lights[20],   // bycicle
+                 &traffic_lights[28], &traffic_lights[29]],
+             Direction::South); // pedestrian
+
+        let south_inner = &TrafficGroup::with(
+            vec![&traffic_lights[27], &traffic_lights[30]]);
+
+        let east_byc_ped = &TrafficGroup::from(
+            vec![&traffic_lights[21], &traffic_lights[22],   // bycicle
+                 &traffic_lights[31], &traffic_lights[34]],  // pedestriant
+             Direction::East); 
+
+        let east_inner = &TrafficGroup::with(vec![&traffic_lights[32], &traffic_lights[33]]);
+
+        let crossing_east = Crossing::from(Control::Group(east_byc_ped), Control::Group(east_inner), Direction::East);
+        let crossing_south = Crossing::from(Control::Group(south_byc_ped), Control::Group(south_inner), Direction::South);
+        let crossing_west = Crossing::from(Control::Group(west_byc_ped), Control::Group(west_inner), Direction::West);
+
+        let crossroad = Crossroad::new(
+            &traffic_light_controls,
+            &primary_road_east_2_3_g,
+            &primary_road_west_9_10_g,
+            &crossing_east,
+            &crossing_south,
+            &crossing_west
+        );
         let mut crossroad_state = CrossroadState::PrimaryTraffic;
         let mut time = 0; // in seconden
 

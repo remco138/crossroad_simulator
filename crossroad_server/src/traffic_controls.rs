@@ -15,138 +15,185 @@ pub enum TrafficLightPhase {
     Green   { start_time: i32 },
 }
 
-pub trait TrafficControl: fmt::Debug {
-    fn get_id(&self) -> usize;
-    fn has_id(&self, id: usize) -> bool;
-    fn has_ids(&self, ids: &Vec<usize>) -> bool;
-	fn conflicting_with<'a>(&'a self, conflicting_with: Vec<&'a TrafficControl>) -> ConflictEntry where Self: Sized {
-		ConflictEntry {
-			traffic_control: self,
-			conflicting_with: conflicting_with,
-		}
-	}
-    fn has_direction(&self, direction: Direction) -> bool;
-    fn get_direction(&self) -> &Direction;
+
+
+// -------------------------------------------------------------------------------
+// Control
+// -------------------------------------------------------------------------------
+
+#[derive(Debug)]
+pub enum Control<'a> {
+    Group(&'a TrafficGroup<'a>),
+    Single(&'a TrafficLight)
 }
 
-
-#[derive(Clone)]
-pub struct ControlWithSensor<'a, 'b> {
-    pub inner: &'a TrafficControl,
-    pub sensor: &'b Sensor,
-}
-
-impl<'a, 'b> ControlWithSensor<'a, 'b>  {
-    pub fn new(inner: &'a TrafficControl, sensor: &'b Sensor) -> ControlWithSensor<'a, 'b> {
-        ControlWithSensor { inner:inner, sensor:sensor }
+impl <'a>From<&'a TrafficGroup<'a>> for Control<'a> {
+    fn from(t: &'a TrafficGroup<'a>) -> Control<'a> {
+        Control::Group(t)
     }
-    pub fn time_waiting(&self, until: time::Tm) -> time::Duration {
-        until - self.sensor.last_update
+}
+impl <'a>From<&'a TrafficLight> for Control<'a> {
+    fn from(t: &'a TrafficLight) -> Control<'a> {
+        Control::Single(t)
     }
 }
 
-impl <'a, 'b>TrafficControl for ControlWithSensor<'a, 'b> {
-    fn get_id(&self) -> usize {
-        self.inner.get_id()
-    }
-    fn has_id(&self, id: usize) -> bool {
-        self.inner.has_id(id)
-    }
-    fn has_ids(&self, ids: &Vec<usize>) -> bool {
-        self.inner.has_ids(ids)
-    }
-    fn has_direction(&self, direction: Direction) -> bool {
-        self.inner.has_direction(direction)
-    }
-    fn get_direction(&self) -> &Direction {
-        self.inner.get_direction()
-    }
-}
+impl <'a>Control<'a> {
+    pub fn is(&self, other: &Control) -> bool {
+        let address_self = self as *const Control;
+        let address_other = other as *const Control;
 
-impl <'a, 'b>fmt::Debug for ControlWithSensor<'a, 'b> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ControlWithSensor({:?}, sensor: {})", self.inner, self.sensor.last_update.ctime())
+        if address_self == address_other {
+            println!("found it by comparing\t\t\t{:?}\n\t\t\t{:?}", address_self, address_other);
+        }
+        address_self == address_other
     }
-}
 
+    pub fn get_ids(&self) -> Vec<usize> {
+        match self {
+            &Control::Group(ref group) => group.get_ids(),
+            &Control::Single(ref tl) => vec![ tl.id ],
+        }
+    }
 
-pub struct ParallelTrafficControl<'a> {
-    pub controls: Vec<&'a TrafficControl>,
-    pub fase: TrafficLightPhase,
-	pub direction: Direction,
-}
+    pub fn contains_one_of(&self, ids: &Vec<usize>) -> bool {
+        match self {
+            &Control::Group(ref group) => group.contains_ids(ids),
+            &Control::Single(ref tl) => tl.contains_ids(ids),
+        }
+    }
 
-impl<'a> ParallelTrafficControl<'a> {
-    pub fn from(controls: Vec<&'a TrafficControl>, direction: Direction) -> ParallelTrafficControl<'a> {
-        ParallelTrafficControl {
-            controls:controls,
-            fase: TrafficLightPhase::Red,
-			direction:direction,
+    pub fn contains(&self, id: usize) -> bool {
+        match self {
+            &Control::Group(ref group) => group.contains_id(id),
+            &Control::Single(ref tl) => tl.id == id,
+        }
+    }
+
+    pub fn conflicting_with(&'a self, conflicting_with: Vec<&'a Control>) -> ConflictEntry where Self: Sized {
+        ConflictEntry {
+            control: self,
+            conflicting_with: conflicting_with,
+        }
+    }
+
+    pub fn direction(&self) -> Direction {
+        match self {
+            &Control::Group(ref group) => group.direction,
+            &Control::Single(ref tl) => tl.direction,
         }
     }
 }
 
-impl <'a>TrafficControl for ParallelTrafficControl<'a> {
-    fn has_id(&self, id: usize) -> bool {
-        self.controls.iter().any(|c| c.has_id(id))
-    }
-    fn get_id(&self) -> usize {
-        self.controls[0].get_id()
-    }
-    fn has_ids(&self, ids: &Vec<usize>) -> bool {
-        self.controls.iter().any(|c| ids.iter().any(|id| c.has_id(*id)))
-    }
-    fn has_direction(&self, direction: Direction) -> bool {
-        self.controls.iter().any(|c| c.has_direction(direction))
-    }
-    fn get_direction(&self) -> &Direction {
-        &self.direction
+// -------------------------------------------------------------------------------
+// Crossing
+// -------------------------------------------------------------------------------
+
+pub struct Crossing<'a> {
+    pub bicycle_and_pedestrain: Control<'a>,
+    pub inner_pedestrian: Control<'a>,
+    pub side: Direction,
+}
+
+impl <'a>Crossing<'a> {
+    pub fn from(bicycle_and_pedestrain: Control<'a>, inner_pedestrian: Control<'a>, side: Direction) -> Crossing<'a> {
+        Crossing {
+            bicycle_and_pedestrain: bicycle_and_pedestrain,
+            inner_pedestrian: inner_pedestrian,
+            side: side,
+        }
     }
 }
 
-impl <'a>fmt::Debug for ParallelTrafficControl<'a> {
+// -------------------------------------------------------------------------------
+// ControlSensor
+// -------------------------------------------------------------------------------
+
+#[derive(Clone)]
+pub struct ControlSensor<'a, 'b> {
+    pub inner: &'a Control<'a>,
+    pub sensor: &'b Sensor,
+    pub conflicting_ids: Vec<usize>
+}
+
+impl <'a, 'b>ControlSensor<'a, 'b>  {
+    pub fn new(inner: &'a Control, sensor: &'b Sensor, conflicting_ids: Vec<usize>) -> ControlSensor<'a, 'b> {
+        ControlSensor { inner:inner, sensor:sensor, conflicting_ids:conflicting_ids }
+    }
+    pub fn time_waiting(&self, until: time::Tm) -> time::Duration {
+        until - self.sensor.last_update
+    }
+    pub fn filter_conflicting<'c>(&'c self, choices: &'c Vec<ControlSensor<'a, 'b>>) -> Vec<&'c ControlSensor<'a, 'b>> {
+        choices.iter()
+               .filter(|&choice| !self.conflicting_ids.iter().any(|&id| choice.inner.contains(id)))
+               .collect()
+    }
+
+}
+
+impl <'a, 'b>fmt::Debug for ControlSensor<'a, 'b> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let ids: Vec<usize> = self.controls.iter().map(|c| c.get_id()).collect();
-        write!(f, "ParallelTrafficControl(id[{:?}],{:?})", ids, self.direction)
+        write!(f, "ControlSensor({:?}, sensor: {}, conflicts: {:?})",
+            self.inner, self.sensor.last_update.ctime(), self.conflicting_ids)
     }
 }
 
+
+
+// -------------------------------------------------------------------------------
+// TrafficGroup
+// -------------------------------------------------------------------------------
+
+pub struct TrafficGroup<'a> {
+    pub traffic_lights: Vec<&'a TrafficLight>,
+	pub direction: Direction,
+}
+
+impl <'a>TrafficGroup<'a> {
+    pub fn with(traffic_lights: Vec<&'a TrafficLight>) -> TrafficGroup {
+        TrafficGroup { traffic_lights:traffic_lights, direction:Direction::North, }
+    }
+    pub fn from(traffic_lights: Vec<&'a TrafficLight>, direction: Direction) -> TrafficGroup<'a> {
+        TrafficGroup { traffic_lights:traffic_lights, direction:direction, }
+    }
+    pub fn get_ids(&self) -> Vec<usize> {
+        self.traffic_lights.iter().map(|tl| tl.id).collect()
+    }
+    pub fn contains_id(&self, id: usize) -> bool {
+        self.traffic_lights.iter().any(|tl| tl.id == id)
+    }
+    pub fn contains_ids(&self, ids: &Vec<usize>) -> bool {
+        self.traffic_lights.iter().any(|tl| ids.iter().any(|&id| id == tl.id))
+    }
+}
+
+impl <'a>fmt::Debug for TrafficGroup<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "TrafficGroup(id[{:?}],{:?})", self.get_ids(), self.direction)
+    }
+}
+
+
+// -------------------------------------------------------------------------------
+// TrafficLight
+// -------------------------------------------------------------------------------
 
 #[derive(Debug)]
 pub struct TrafficLight {
     pub id: usize,
-    pub fase: TrafficLightPhase,
+    pub phase: TrafficLightPhase,
 	pub direction: Direction,
 }
 
 impl TrafficLight {
     pub fn new(id: usize) -> TrafficLight {
-        TrafficLight {id:id, fase: TrafficLightPhase::Red, direction: Direction::North,}
+        TrafficLight { id:id, phase: TrafficLightPhase::Red, direction: Direction::North, }
     }
-    pub fn with_direction(id: usize, direction: Direction) -> TrafficLight {
-        TrafficLight {
-			id:id,
-            fase: TrafficLightPhase::Red,
-            direction:direction,
-		}
+    pub fn with(id: usize, direction: Direction) -> TrafficLight {
+        TrafficLight { id:id, phase: TrafficLightPhase::Red, direction:direction, }
     }
-}
-
-impl TrafficControl for TrafficLight {
-    fn get_id(&self) -> usize {
-        self.id
-    }
-    fn has_id(&self, id: usize) -> bool {
-        self.id == id
-    }
-    fn has_ids(&self, ids: &Vec<usize>) -> bool {
-        ids.iter().any(|id| *id == self.id)
-    }
-    fn has_direction(&self, direction: Direction) -> bool {
-        self.direction == direction
-    }
-    fn get_direction(&self) -> &Direction {
-        &self.direction
+    pub fn contains_ids(&self, ids: &Vec<usize>) -> bool {
+        ids.iter().any(|&id| id == self.id)
     }
 }
 
@@ -166,40 +213,50 @@ impl<'a> XorConflictsGroup<'a> {
         XorConflictsGroup { name: name, conflicts:conflicts }
     }
 
-    pub fn get_conflicts_for_id(&'a self, id: usize) ->  Option<Vec<usize>> {
-        let selected_conflict = self.conflicts.iter().find(|c| c.traffic_control.has_id(id));
-
-        selected_conflict.map(|conflict| {
-            let mut top_node_ids:Vec<usize> = self.conflicts.iter().map(|cf| cf.traffic_control.get_id()).collect();
-            let extra_confl_ids = conflict.get_conflict_ids();
-            top_node_ids.extend(extra_confl_ids);
-            top_node_ids
-        })
+    pub fn get_conflicts_for(&'a self, control: &Control<'a>) ->  Option<Vec<usize>> {
+        self.conflicts
+            .iter()
+            .find(|conflict| conflict.is_for(control))
+            .map(|conflict| {
+                let mut top_node_ids = self.top_node_ids();
+                top_node_ids.extend(conflict.get_conflicting_ids());
+                top_node_ids
+            })
     }
 
-    pub fn get_traffic_controls(&self) -> Vec<&'a TrafficControl> {
-        self.conflicts.iter().map(|cf| cf.traffic_control).collect()
+    pub fn get_conflicts_for_id(&'a self, id: usize) ->  Option<Vec<usize>> {
+        self.conflicts
+            .iter()
+            .find(|conflict| conflict.is_for_id(id))
+            .map(|conflict| {
+                let mut top_node_ids = self.top_node_ids();
+                top_node_ids.extend(conflict.get_conflicting_ids());
+                top_node_ids
+            })
+    }
+
+    fn top_node_ids(&self) -> Vec<usize> {
+        self.conflicts.iter().flat_map(|conflict| conflict.control.get_ids()).collect()
     }
 }
 
 
 #[derive(Debug)]
 pub struct ConflictEntry<'a> {
-    pub traffic_control: &'a TrafficControl,
-    pub conflicting_with: Vec<&'a TrafficControl>,
+    pub control: &'a Control<'a>,
+    pub conflicting_with: Vec<&'a Control<'a>>,
 }
 
 impl<'a> ConflictEntry<'a> {
-    pub fn get_conflict_ids(&self) -> Vec<usize> {
-        self.conflicting_with.iter().map(|vr| vr.get_id()).collect()
+    pub fn is_for(&self, other_control: &'a Control<'a>) -> bool {
+        self.control.is(other_control)
     }
 
-    pub fn from(src: &'a ConflictEntry<'a>, extra: Vec<&'a TrafficControl>) -> ConflictEntry<'a> {
-        let mut inst = ConflictEntry {
-            traffic_control: src.traffic_control,
-            conflicting_with: src.conflicting_with.clone(),
-        };
-        inst.conflicting_with.push_all(extra.as_slice());
-        inst
+    pub fn is_for_id(&self, id: usize) -> bool {
+        self.control.contains(id)
+    }
+
+    pub fn get_conflicting_ids(&self) -> Vec<usize> {
+        self.conflicting_with.iter().map(|x|*x).flat_map(Control::get_ids).collect()
     }
 }
