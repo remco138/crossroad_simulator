@@ -1,11 +1,14 @@
 use error::{Result, Error, JsonError};
 use serde::de;
+use serde::ser;
 use serde_json;
 use std::fmt;
 use time;
 use std::collections::HashMap;
 use crossroad::*;
 use traffic_controls::*;
+use std::sync::mpsc::{channel, Sender, Receiver};
+use serde_json::error::Error as SerdeError;
 
 pub const BAAN_COUNT: usize = 35; //TODO: REMOVE
 
@@ -25,10 +28,12 @@ impl SensorStates {
         inst
     }
 
+    pub fn has_active(&self, control: &Control) -> bool {
+        control.get_ids().iter().any(|&id| self.sensors[id].bezet)
+    }
+
     pub fn has_any_active(&self, controls: &Vec<&Control>) -> bool {
-        self.sensors.iter().any(|sensor| {
-            controls.iter().any(|control| control.contains(sensor.id))
-        })
+        controls.iter().any(|c| self.has_active(c))
     }
 
     pub fn _debug_update_directly(&mut self, states: Vec<Sensor>) {
@@ -67,7 +72,6 @@ impl SensorStates {
             .map(|x|*x)
             .min_by(|b| b.last_update)
             .map(|longest_waiting| {
-
                 active_sensors.retain(|&s| s.id != longest_waiting.id);
                 (longest_waiting, active_sensors)
             })
@@ -110,7 +114,6 @@ impl Sensor {
     fn new() -> Sensor { Sensor { id: 0, bezet: false, last_update: time::empty_tm() } }
 }
 
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct BusBaan {
     pub id: usize,
@@ -124,7 +127,7 @@ pub struct BusBaan {
 // -------------------------------------------------------------------------------
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
-pub enum StoplichtJsonStatus {
+pub enum JsonState {
     Rood = 0,
     Geel = 1,
     Groen = 2,
@@ -133,9 +136,24 @@ pub enum StoplichtJsonStatus {
     BusRechtsaf = 5
 }
 
+impl JsonState {
+    pub fn id(&self) -> usize {
+        *self as usize
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
-pub struct StoplichtArrayJson {
+pub struct ClientJson {
     pub banen: Vec<StoplichtJson>
+}
+
+impl ClientJson {
+    pub fn from(banen: Vec<StoplichtJson>) -> ClientJson {
+        ClientJson { banen: banen }
+    }
+    pub fn serialize(&self) -> serde_json::error::Result<String> {
+        serde_json::to_string(self)
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
@@ -145,15 +163,21 @@ pub struct StoplichtJson {
 }
 
 impl StoplichtJson {
-    pub fn new() -> StoplichtJson {
-        StoplichtJson { id: 0, status: StoplichtJsonStatus::Rood as usize }
+    pub fn empty() -> StoplichtJson {
+        StoplichtJson { id: 0, status: JsonState::Rood.id() }
     }
 }
-
 
 // -------------------------------------------------------------------------------
 // Json
 // -------------------------------------------------------------------------------
+/*
+TODO: REMOVE
+pub fn send_json(out_tx: &Sender<String>, obj: StoplichtJson) -> serde_json::error::Result<String>  {
+    serde_json::to_string(obj).and_then(|json_str| {
+        out_tx.send(json_str).unwrap() // TODO: remove unwraps!
+    });
+}*/
 
 pub fn json_from_str<T>(s: &str) -> Result<T> where T: de::Deserialize {
     serde_json::from_str(&s).map_err(|serd_err| {
