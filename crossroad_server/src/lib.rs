@@ -20,7 +20,7 @@ trait BoolToOpt {
 }
 
 impl BoolToOpt for bool {
-	fn to_opt(&self) -> Option<()> {
-	    if *self { Some(()) } else { None }
-	}
+    fn to_opt(&self) -> Option<()> {
+        if *self { Some(()) } else { None }
+    }
 }

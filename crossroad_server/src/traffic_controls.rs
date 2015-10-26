@@ -22,7 +22,7 @@ pub enum TrafficLightState {
 
 #[derive(Debug, Clone)]
 pub struct ControlWithState<'a> {
-	pub inner: &'a Control<'a>,
+    pub inner: &'a Control<'a>,
     pub state: TrafficLightState,
     pub force_red: bool,
 }
@@ -52,7 +52,7 @@ impl <'a>ControlWithState<'a>  {
             },
 
             TrafficLightState::Green { start } => {
-                println!("****  Green since {:?}, {:?} -> {:?}", start, self.inner, self.state);
+                //println!("****  Green since {:?}, {:?} -> {:?}", start, self.inner, self.state);
 
                 if self.force_red {
                     self.inner.send_unsafe(out_tx, JsonState::Geel);
@@ -244,7 +244,7 @@ impl <'a, 'b>fmt::Debug for ControlSensor<'a, 'b> {
 
 pub struct TrafficGroup<'a> {
     pub traffic_lights: Vec<&'a TrafficLight>,
-	pub direction: Direction,
+    pub direction: Direction,
     pub traffic_type: Type,
 }
 
@@ -282,7 +282,7 @@ impl <'a>fmt::Debug for TrafficGroup<'a> {
 
 pub struct TrafficLight {
     pub id: usize,
-	pub direction: Direction,
+    pub direction: Direction,
     pub traffic_type: Type,
 }
 

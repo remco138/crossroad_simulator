@@ -1,4 +1,5 @@
 #![allow(dead_code, unused_variables, unused_imports, unused_must_use,)]
+#![feature(ip_addr)]
 
 extern crate time;
 extern crate serde;
@@ -17,6 +18,11 @@ use std::thread;
 use std::thread::{JoinHandle};
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::{channel, Sender, Receiver};
+
+use std::fs::File;
+use std::path::Path;
+use std::fs::OpenOptions;
+
 
 use crossroad_server::crossroad::*;
 use crossroad_server::traffic_protocol::*;
@@ -50,6 +56,8 @@ fn run_server<A>(address: A) -> io::Result<()> where A: ToSocketAddrs + Display 
 
 fn handle_client(client_stream: TcpStream) -> io::Result<()> {
 
+    let (log_file_recv, log_file_sent) = create_log_files(&client_stream).expect("log files");
+
     // Convert stream to buffered streams
     let client_reader = BufReader::new(try!(client_stream.try_clone()));
     let client_writer = BufWriter::new(client_stream);
@@ -62,8 +70,8 @@ fn handle_client(client_stream: TcpStream) -> io::Result<()> {
     let client_baan_sensor_states = Arc::new(Mutex::new(SensorStates::new()));
 
     // Run seperate threads
-    let client_receiver_handle = spawn_client_sensor_receiver(client_reader, client_baan_sensor_states.clone());
-    let client_updater_handle = spawn_client_updater(client_writer, out_receiver);
+    let client_receiver_handle = spawn_client_sensor_receiver(client_reader, client_baan_sensor_states.clone(), log_file_recv);
+    let client_updater_handle = spawn_client_updater(client_writer, out_receiver, log_file_sent);
     let verkeersregelinstallatie_handle = spawn_main_loop(out_transmitter, exit_main_loop_rx, client_baan_sensor_states.clone());
 
     println!("Connection established");
@@ -76,6 +84,21 @@ fn handle_client(client_stream: TcpStream) -> io::Result<()> {
     exit_main_loop_tx.send(0);
     verkeersregelinstallatie_handle.join();
     Ok(())
+}
+
+fn create_log_files(client_stream: &TcpStream) -> io::Result<(File, File)> {
+    let ip = try!(client_stream.local_addr().map(|sock| sock.ip()));
+    let file_name = format!("{}_{}",  time::now().strftime("%e-%m-%G_%k%M_").unwrap(), ip);
+    let path_in = format!("{}_{}.log", file_name, "received");
+    let path_out = format!("{}_{}.log", file_name, "sent");
+
+    let mut o = OpenOptions::new();
+    let u = o.create(true).append(true);
+
+    let log_file_recv = try!(u.open(Path::new(&path_in)));
+    let log_file_sent = try!(u.open(Path::new(&path_out)));
+
+    Ok((log_file_recv, log_file_sent))
 }
 
 fn spawn_main_loop( out_tx: Sender<String>,
@@ -153,28 +176,35 @@ fn spawn_main_loop( out_tx: Sender<String>,
     })
 }
 
-fn spawn_client_sensor_receiver(mut reader: BufReader<TcpStream>, sensor_data: Arc<Mutex<SensorStates>>) -> JoinHandle<Result<()>> {
+fn spawn_client_sensor_receiver(mut reader: BufReader<TcpStream>, sensor_data: Arc<Mutex<SensorStates>>, mut log_file: File) -> JoinHandle<Result<()>> {
+
     thread::spawn(move || {
         loop {
             let mut line = String::new();
-            try!(reader.read_line(&mut line));
 
-            let line_trimmed = &line[0..(line.len()-1)];
+            try!(reader.read_line(&mut line));
+            //let line_trimmed = &line[0..(line.len()-1)];
             let ref mut traffic_state = *sensor_data.lock().unwrap();
 
-            match traffic_state.update_from_json(line_trimmed) {
+            log_file.write(format!("\n\n{}\n", time::now().strftime("%T").unwrap()).as_bytes());
+            log_file.write_all(&line.as_bytes());
+
+            match traffic_state.update_from_json(&line) {
                 Ok(banen_json) => println!("Client->Server: received baan sensor update: {:?}\nnew_state = {:?}", banen_json, traffic_state),
-                Err(err) => println!("Client->Server: received faulty json string {:?}", line_trimmed),
+                Err(err) => println!("Client->Server: received faulty json string {:?}", line),
             }
         }
     })
 }
 
-fn spawn_client_updater(mut writer: BufWriter<TcpStream>, rx: Receiver<String>) -> thread::JoinHandle<Result<()>> {
+fn spawn_client_updater(mut writer: BufWriter<TcpStream>, rx: Receiver<String>, mut log_file: File) -> thread::JoinHandle<Result<()>> {
     thread::spawn(move || {
         loop {
             match rx.recv() {
                 Ok(msg) => {
+                    log_file.write(format!("\n\n{}\n", time::now().strftime("%T").unwrap()).as_bytes());
+                    log_file.write_all(&msg.as_bytes());
+
                     try!(writer.write(&msg.as_bytes()));
                     try!(writer.flush());
                     println!("Server->Client: sent new stoplicht state {:?}", msg);
