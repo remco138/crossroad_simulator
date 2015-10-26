@@ -4,7 +4,7 @@
    [cljs.nodejs :as node]))
 
 (defn only-node [f]
-  (when (undefined? cljs.node) f))
+  (when (undefined? cljs.node) (f)))
 
 
 (only-node #(def net (node/require "net")))
@@ -39,7 +39,7 @@
 
 
 (defn connect! [port]
-  #(do (print "connecting..")
+  (do (print "connecting..")
        (reset! client (.createConnection net port))
        (.on @client "connect" on-connect)
        (.on @client "data" on-data)))
