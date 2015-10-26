@@ -23,6 +23,12 @@ fn add<'a, 'b, T>(
 
 pub fn combine_list<'a, T>(mut a: Vec<Vec<&'a T>>) -> Vec<Vec<&'a T>> {
 
+	match a.len() {
+		0 => return vec![],
+		1 => return a,
+		_ => {},
+	}
+
 	let first = a.pop().unwrap();
 	let secon = a.pop().unwrap();
 	let start = combine(&first, &secon);
@@ -49,6 +55,14 @@ fn add_v<T: Clone>(mut to: Vec<Vec<T>>, to_add: &Vec<T>) -> Vec<Vec<T>> {
 }
 
 pub fn combine_list_v<T: Clone>(mut a: Vec<Vec<T>>) -> Vec<Vec<T>> {
+
+	match a.len() {
+		0 => return vec![],
+		1 => return a,
+		_ => {},
+	}
+
+
 	let first = a.pop().unwrap();
 	let secon = a.pop().unwrap();
 	let start = combine_v(&first, &secon);

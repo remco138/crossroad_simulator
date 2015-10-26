@@ -6,150 +6,332 @@ use time;
 use std::collections::HashMap;
 use crossroad::*;
 use traffic_protocol::*;
+use std::sync::mpsc::{channel, Sender, Receiver};
 
 
-#[derive(Debug, PartialEq)]
-pub enum TrafficLightPhase {
+const YELLOW_TIME: i32 = 4;
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum TrafficLightState {
+    Init,
+    MinimalGreen    { start: i32 },
+    Green           { start: i32 },
+    Yellow          { start: i32 },
     Red,
-    Yellow  { start_time: i32 },
-    Green   { start_time: i32 },
 }
 
-pub trait TrafficControl: fmt::Debug {
-    fn get_id(&self) -> usize;
-    fn has_id(&self, id: usize) -> bool;
-    fn has_ids(&self, ids: &Vec<usize>) -> bool;
-	fn conflicting_with<'a>(&'a self, conflicting_with: Vec<&'a TrafficControl>) -> ConflictEntry where Self: Sized {
-		ConflictEntry {
-			traffic_control: self,
-			conflicting_with: conflicting_with,
-		}
-	}
-    fn has_direction(&self, direction: Direction) -> bool;
-    fn get_direction(&self) -> &Direction;
+#[derive(Debug, Clone)]
+pub struct ControlWithState<'a> {
+	pub inner: &'a Control<'a>,
+    pub state: TrafficLightState,
+    pub force_red: bool,
 }
 
+impl <'a>ControlWithState<'a>  {
+    pub fn new(inner: &'a Control) -> ControlWithState<'a> {
+        ControlWithState { inner:inner, state: TrafficLightState::Init, force_red: false }
+    }
 
-#[derive(Clone)]
-pub struct ControlWithSensor<'a, 'b> {
-    pub inner: &'a TrafficControl,
-    pub sensor: &'b Sensor,
+    pub fn run_loop(&mut self, time: i32, out_tx: &Sender<String>, sensor_states: &SensorStates, unlimited_green: bool) -> TrafficLightState {
+
+        let new_state = match self.state {
+
+            TrafficLightState::Init => {
+                Some(TrafficLightState::MinimalGreen { start: time })
+            },
+
+            TrafficLightState::MinimalGreen { start } => {
+                println!("****  MinimalGreen since {:?}, {:?} -> {:?}", start,  self.inner, self.state );
+
+                if time >= start + self.inner.traffic_type().min_green() {
+                    Some(TrafficLightState::Green{ start: time })
+                }
+                else {
+                    None
+                }
+            },
+
+            TrafficLightState::Green { start } => {
+                println!("****  Green since {:?}, {:?} -> {:?}", start, self.inner, self.state);
+
+                if self.force_red {
+                    self.inner.send_unsafe(out_tx, JsonState::Geel);
+                    self.force_red = false;
+                    Some(TrafficLightState::Yellow{ start: time })
+                }
+                else if unlimited_green {
+                    None
+                }
+                else {
+                    // if: sensor is activated -> extend green time
+                    // else if: check if we can move to yellow
+                    if sensor_states.has_active(self.inner) {
+                        Some(TrafficLightState::Green{ start: time }) // reset timer
+                    }
+                    else if time >= start + self.inner.traffic_type().green_extra() {
+                        self.inner.send_unsafe(out_tx, JsonState::Geel);
+                        Some(TrafficLightState::Yellow{ start: time })
+                    }
+                    else {
+                        None
+                    }
+                }
+            },
+
+            TrafficLightState::Yellow { start } => {
+                println!("****  Yellow {:?} -> {:?}, {:?} -> {:?}", start, start + YELLOW_TIME, self.inner, self.state);
+
+                if time >= start + YELLOW_TIME {
+                    self.inner.send_unsafe(out_tx, JsonState::Rood);
+                    Some(TrafficLightState::Red)
+                }
+                else {
+                    None
+                }
+            },
+
+            TrafficLightState::Red => {
+                println!("****  RED");
+                None
+            }
+        };
+
+        if let Some(v) = new_state { self.state = v };
+        self.state.clone()
+    }
 }
 
-impl<'a, 'b> ControlWithSensor<'a, 'b>  {
-    pub fn new(inner: &'a TrafficControl, sensor: &'b Sensor) -> ControlWithSensor<'a, 'b> {
-        ControlWithSensor { inner:inner, sensor:sensor }
+// -------------------------------------------------------------------------------
+// Control
+// -------------------------------------------------------------------------------
+
+#[derive(Debug)]
+pub enum Control<'a> {
+    Group(&'a TrafficGroup<'a>),
+    Single(&'a TrafficLight)
+}
+
+impl <'a>From<&'a TrafficGroup<'a>> for Control<'a> {
+    fn from(t: &'a TrafficGroup<'a>) -> Control<'a> {
+        Control::Group(t)
     }
-    pub fn time_waiting(&self, until: time::Tm) -> time::Duration {
-        until - self.sensor.last_update
+}
+impl <'a>From<&'a TrafficLight> for Control<'a> {
+    fn from(t: &'a TrafficLight) -> Control<'a> {
+        Control::Single(t)
     }
 }
 
-impl <'a, 'b>TrafficControl for ControlWithSensor<'a, 'b> {
-    fn get_id(&self) -> usize {
-        self.inner.get_id()
+impl <'a>Control<'a> {
+
+    pub fn conflicting_with(&'a self, conflicting_with: Vec<&'a Control>) -> ConflictEntry where Self: Sized {
+        ConflictEntry {
+            control: self,
+            conflicting_with: conflicting_with,
+        }
     }
-    fn has_id(&self, id: usize) -> bool {
-        self.inner.has_id(id)
+
+    pub fn is(&self, other: &Control) -> bool {
+        let address_self = self as *const Control;
+        let address_other = other as *const Control;
+        address_self == address_other
     }
-    fn has_ids(&self, ids: &Vec<usize>) -> bool {
-        self.inner.has_ids(ids)
+
+    pub fn contains_one_of(&self, ids: &Vec<usize>) -> bool {
+        match self {
+            &Control::Group(ref group) => group.contains_ids(ids),
+            &Control::Single(ref tl) => tl.contains_ids(ids),
+        }
     }
-    fn has_direction(&self, direction: Direction) -> bool {
-        self.inner.has_direction(direction)
+
+    pub fn contains(&self, id: usize) -> bool {
+        match self {
+            &Control::Group(ref group) => group.contains_id(id),
+            &Control::Single(ref tl) => tl.id == id,
+        }
     }
-    fn get_direction(&self) -> &Direction {
-        self.inner.get_direction()
+
+    pub fn traffic_type(&self) -> &Type {
+        match self {
+            &Control::Group(ref group) => &group.traffic_type,
+            &Control::Single(ref tl) => &tl.traffic_type,
+        }
+    }
+
+    pub fn get_ids(&self) -> Vec<usize> {
+        match self {
+            &Control::Group(ref group) => group.get_ids(),
+            &Control::Single(ref tl) => vec![tl.id],
+        }
+    }
+
+    pub fn direction(&self) -> Direction {
+        match self {
+            &Control::Group(ref group) => group.direction,
+            &Control::Single(ref tl) => tl.direction,
+        }
+    }
+
+    pub fn json_objs(&self, state: JsonState) -> Vec<StoplichtJson> {
+        match self {
+            &Control::Group(ref group) => group.json_objs(&state),
+            &Control::Single(ref tl) => vec![tl.json_obj(&state)],
+        }
+    }
+
+    pub fn send_unsafe(&self, out_tx: &Sender<String>, state: JsonState) {
+        let json_str = ClientJson::from(self.json_objs(state)).serialize();
+        out_tx.send(json_str.unwrap()).unwrap()
     }
 }
 
-impl <'a, 'b>fmt::Debug for ControlWithSensor<'a, 'b> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ControlWithSensor({:?}, sensor: {})", self.inner, self.sensor.last_update.ctime())
-    }
+// -------------------------------------------------------------------------------
+// Crossing
+// -------------------------------------------------------------------------------
+
+pub struct Crossing<'a> {
+    pub bicycle_and_pedestrain: Control<'a>,
+    pub inner_pedestrian: Control<'a>,
+    pub side: Direction,
 }
 
-
-pub struct ParallelTrafficControl<'a> {
-    pub controls: Vec<&'a TrafficControl>,
-    pub fase: TrafficLightPhase,
-	pub direction: Direction,
-}
-
-impl<'a> ParallelTrafficControl<'a> {
-    pub fn from(controls: Vec<&'a TrafficControl>, direction: Direction) -> ParallelTrafficControl<'a> {
-        ParallelTrafficControl {
-            controls:controls,
-            fase: TrafficLightPhase::Red,
-			direction:direction,
+impl <'a>Crossing<'a> {
+    pub fn from(bicycle_and_pedestrain: Control<'a>, inner_pedestrian: Control<'a>, side: Direction) -> Crossing<'a> {
+        Crossing {
+            bicycle_and_pedestrain: bicycle_and_pedestrain,
+            inner_pedestrian: inner_pedestrian,
+            side: side,
         }
     }
 }
 
-impl <'a>TrafficControl for ParallelTrafficControl<'a> {
-    fn has_id(&self, id: usize) -> bool {
-        self.controls.iter().any(|c| c.has_id(id))
+// -------------------------------------------------------------------------------
+// ControlSensor
+// -------------------------------------------------------------------------------
+
+#[derive(Clone)]
+pub struct ControlSensor<'a, 'b> {
+    pub inner: &'a Control<'a>,
+    pub sensor: &'b Sensor,
+    pub conflicting_ids: Vec<usize>
+}
+
+impl <'a, 'b>ControlSensor<'a, 'b>  {
+    pub fn new(inner: &'a Control, sensor: &'b Sensor, conflicting_ids: Vec<usize>) -> ControlSensor<'a, 'b> {
+        ControlSensor { inner:inner, sensor:sensor, conflicting_ids:conflicting_ids }
     }
-    fn get_id(&self) -> usize {
-        self.controls[0].get_id()
+    pub fn time_waiting(&self, until: time::Tm) -> time::Duration {
+        until - self.sensor.last_update
     }
-    fn has_ids(&self, ids: &Vec<usize>) -> bool {
-        self.controls.iter().any(|c| ids.iter().any(|id| c.has_id(*id)))
-    }
-    fn has_direction(&self, direction: Direction) -> bool {
-        self.controls.iter().any(|c| c.has_direction(direction))
-    }
-    fn get_direction(&self) -> &Direction {
-        &self.direction
+    pub fn filter_conflicting<'c>(&'c self, choices: &'c Vec<ControlSensor<'a, 'b>>) -> Vec<&'c ControlSensor<'a, 'b>> {
+        choices.iter()
+               .filter(|&choice| !self.conflicting_ids.iter().any(|&id| choice.inner.contains(id)))
+               .collect()
     }
 }
 
-impl <'a>fmt::Debug for ParallelTrafficControl<'a> {
+impl <'a, 'b>fmt::Debug for ControlSensor<'a, 'b> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let ids: Vec<usize> = self.controls.iter().map(|c| c.get_id()).collect();
-        write!(f, "ParallelTrafficControl(id[{:?}],{:?})", ids, self.direction)
+        write!(f, "ControlSensor({:?}, sensor: {}, conflicts: {:?})",
+            self.inner, self.sensor.last_update.ctime(), self.conflicting_ids)
     }
 }
 
 
-#[derive(Debug)]
+// -------------------------------------------------------------------------------
+// TrafficGroup
+// -------------------------------------------------------------------------------
+
+pub struct TrafficGroup<'a> {
+    pub traffic_lights: Vec<&'a TrafficLight>,
+	pub direction: Direction,
+    pub traffic_type: Type,
+}
+
+impl <'a>TrafficGroup<'a> {
+    pub fn with(traffic_lights: Vec<&'a TrafficLight>, traffic_type: Type) -> TrafficGroup {
+        TrafficGroup { traffic_lights:traffic_lights, direction:Direction::North, traffic_type:traffic_type }
+    }
+    pub fn from(traffic_lights: Vec<&'a TrafficLight>, direction: Direction, traffic_type: Type) -> TrafficGroup<'a> {
+        TrafficGroup { traffic_lights:traffic_lights, direction:direction, traffic_type:traffic_type }
+    }
+    pub fn get_ids(&self) -> Vec<usize> {
+        self.traffic_lights.iter().map(|tl| tl.id).collect()
+    }
+    pub fn contains_id(&self, id: usize) -> bool {
+        self.traffic_lights.iter().any(|tl| tl.id == id)
+    }
+    pub fn contains_ids(&self, ids: &Vec<usize>) -> bool {
+        self.traffic_lights.iter().any(|tl| ids.iter().any(|&id| id == tl.id))
+    }
+    pub fn json_objs(&self, state: &JsonState) -> Vec<StoplichtJson> {
+        self.traffic_lights.iter().map(|tl| tl.json_obj(state)).collect()
+    }
+}
+
+impl <'a>fmt::Debug for TrafficGroup<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "TrafficGroup({:?},{:?})", self.get_ids(), self.direction)
+    }
+}
+
+
+// -------------------------------------------------------------------------------
+// TrafficLight
+// -------------------------------------------------------------------------------
+
 pub struct TrafficLight {
     pub id: usize,
-    pub fase: TrafficLightPhase,
 	pub direction: Direction,
+    pub traffic_type: Type,
 }
 
 impl TrafficLight {
-    pub fn new(id: usize) -> TrafficLight {
-        TrafficLight {id:id, fase: TrafficLightPhase::Red, direction: Direction::North,}
+    pub fn new(id: usize, direction: Direction, traffic_type: Type) -> TrafficLight {
+        TrafficLight { id:id, direction:direction, traffic_type:traffic_type}
     }
-    pub fn with_direction(id: usize, direction: Direction) -> TrafficLight {
-        TrafficLight {
-			id:id,
-            fase: TrafficLightPhase::Red,
-            direction:direction,
-		}
+    pub fn contains_ids(&self, ids: &Vec<usize>) -> bool {
+        ids.iter().any(|&id| id == self.id)
     }
-}
-
-impl TrafficControl for TrafficLight {
-    fn get_id(&self) -> usize {
-        self.id
-    }
-    fn has_id(&self, id: usize) -> bool {
-        self.id == id
-    }
-    fn has_ids(&self, ids: &Vec<usize>) -> bool {
-        ids.iter().any(|id| *id == self.id)
-    }
-    fn has_direction(&self, direction: Direction) -> bool {
-        self.direction == direction
-    }
-    fn get_direction(&self) -> &Direction {
-        &self.direction
+    pub fn json_obj(&self, state: &JsonState) -> StoplichtJson {
+        StoplichtJson { id: self.id, status: state.id() }
     }
 }
 
+impl fmt::Debug for TrafficLight {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "TrafficLight({:?},{:?})", self.id, self.direction)
+    }
+}
+
+
+// -------------------------------------------------------------------------------
+// TrafficType
+// -------------------------------------------------------------------------------
+
+#[derive(Debug, Clone)]
+pub enum Type {
+    Primary,
+    Vehicle,
+    Rest
+}
+
+impl Type {
+    pub fn min_green(&self) -> i32 {
+        match self {
+            &Type::Primary => 7,
+            &Type::Vehicle => 7,
+            &Type::Rest => 20,
+        }
+    }
+    pub fn green_extra(&self) -> i32 {
+        match self {
+            &Type::Primary => 999,//std::i32::MAX,
+            &Type::Vehicle => 7,
+            &Type::Rest => 10,
+        }
+    }
+}
 
 // -------------------------------------------------------------------------------
 // Conflicts
@@ -162,44 +344,50 @@ pub struct XorConflictsGroup<'a> {
 }
 
 impl<'a> XorConflictsGroup<'a> {
-    pub fn from(name: String, conflicts: Vec<ConflictEntry<'a>>) -> XorConflictsGroup {
+    pub fn new(name: String, conflicts: Vec<ConflictEntry<'a>>) -> XorConflictsGroup {
         XorConflictsGroup { name: name, conflicts:conflicts }
     }
 
-    pub fn get_conflicts_for_id(&'a self, id: usize) ->  Option<Vec<usize>> {
-        let selected_conflict = self.conflicts.iter().find(|c| c.traffic_control.has_id(id));
-
-        selected_conflict.map(|conflict| {
-            let mut top_node_ids:Vec<usize> = self.conflicts.iter().map(|cf| cf.traffic_control.get_id()).collect();
-            let extra_confl_ids = conflict.get_conflict_ids();
-            top_node_ids.extend(extra_confl_ids);
-            top_node_ids
-        })
+    pub fn get_conflicts_for(&'a self, control: &Control<'a>) ->  Option<Vec<usize>> {
+        self.conflicts.iter()
+            .find(|conflict| conflict.is_for(control))
+            .map( |conflict| self.get_conflicting_ids(conflict))
     }
 
-    pub fn get_traffic_controls(&self) -> Vec<&'a TrafficControl> {
-        self.conflicts.iter().map(|cf| cf.traffic_control).collect()
+    pub fn get_conflicts_for_id(&'a self, id: usize) ->  Option<Vec<usize>> {
+        self.conflicts.iter()
+            .find(|conflict| conflict.is_for_id(id))
+            .map( |conflict| self.get_conflicting_ids(conflict))
+    }
+
+    fn get_conflicting_ids(&self, conflict: &ConflictEntry) -> Vec<usize> {
+        let mut top_node_ids = self.top_node_ids();
+        top_node_ids.extend(conflict.get_conflicting_ids());
+        top_node_ids
+    }
+
+    fn top_node_ids(&self) -> Vec<usize> {
+        self.conflicts.iter().flat_map(|conflict| conflict.control.get_ids()).collect()
     }
 }
 
 
 #[derive(Debug)]
 pub struct ConflictEntry<'a> {
-    pub traffic_control: &'a TrafficControl,
-    pub conflicting_with: Vec<&'a TrafficControl>,
+    pub control: &'a Control<'a>,
+    pub conflicting_with: Vec<&'a Control<'a>>,
 }
 
 impl<'a> ConflictEntry<'a> {
-    pub fn get_conflict_ids(&self) -> Vec<usize> {
-        self.conflicting_with.iter().map(|vr| vr.get_id()).collect()
+    pub fn is_for(&self, other_control: &'a Control<'a>) -> bool {
+        self.control.is(other_control)
     }
 
-    pub fn from(src: &'a ConflictEntry<'a>, extra: Vec<&'a TrafficControl>) -> ConflictEntry<'a> {
-        let mut inst = ConflictEntry {
-            traffic_control: src.traffic_control,
-            conflicting_with: src.conflicting_with.clone(),
-        };
-        inst.conflicting_with.push_all(extra.as_slice());
-        inst
+    pub fn is_for_id(&self, id: usize) -> bool {
+        self.control.contains(id)
+    }
+
+    pub fn get_conflicting_ids(&self) -> Vec<usize> {
+        self.conflicting_with.iter().map(|x|*x).flat_map(Control::get_ids).collect()
     }
 }

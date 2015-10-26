@@ -86,10 +86,50 @@ fn spawn_main_loop( out_tx: Sender<String>,
     thread::spawn(move || {
 
         let traffic_lights = generate_traffic_lights();
-        let primary_road_east_2_3 = ParallelTrafficControl::from(vec![&traffic_lights[2], &traffic_lights[3]], traffic_lights[2].direction);
-        let primary_road_west_9_10 = ParallelTrafficControl::from(vec![&traffic_lights[9], &traffic_lights[10]], traffic_lights[9].direction);
-        let crossroad = Crossroad::new(&traffic_lights, &primary_road_east_2_3, &primary_road_west_9_10);
-        let mut crossroad_state = CrossroadState::PrimaryTraffic;
+        let traffic_light_controls = to_controls(&traffic_lights);
+
+        let primary_road_east_2_3 = &TrafficGroup::from(vec![&traffic_lights[2], &traffic_lights[3]], Direction::East, Type::Primary);
+        let primary_road_east_2_3_g = Control::Group(primary_road_east_2_3);
+
+        let primary_road_west_9_10 = &TrafficGroup::from(vec![&traffic_lights[9], &traffic_lights[10]], Direction::West, Type::Primary);
+        let primary_road_west_9_10_g = Control::Group(primary_road_west_9_10);
+
+        let west_inner = &TrafficGroup::with(vec![&traffic_lights[24], &traffic_lights[26]], Type::Rest);
+        let west_byc_ped = &TrafficGroup::from(
+            vec![&traffic_lights[17], &traffic_lights[23], &traffic_lights[25]],
+            Direction::West,
+            Type::Rest
+        );
+
+        let south_inner = &TrafficGroup::with(vec![&traffic_lights[27], &traffic_lights[30]], Type::Rest);
+        let south_byc_ped = &TrafficGroup::from(
+            vec![&traffic_lights[19], &traffic_lights[20],   // bycicle
+                 &traffic_lights[28], &traffic_lights[29]],  // pedestrian
+             Direction::South,
+             Type::Rest
+        );
+
+        let east_inner = &TrafficGroup::with(vec![&traffic_lights[32], &traffic_lights[33]], Type::Rest);
+        let east_byc_ped = &TrafficGroup::from(
+            vec![&traffic_lights[21], &traffic_lights[22],   // bycicle
+                 &traffic_lights[31], &traffic_lights[34]],  // pedestrian
+             Direction::East,
+             Type::Rest
+        );
+
+        let crossing_east = Crossing::from(Control::Group(east_byc_ped), Control::Group(east_inner), Direction::East);
+        let crossing_south = Crossing::from(Control::Group(south_byc_ped), Control::Group(south_inner), Direction::South);
+        let crossing_west = Crossing::from(Control::Group(west_byc_ped), Control::Group(west_inner), Direction::West);
+
+        let crossroad = Crossroad::new(
+            &traffic_light_controls,
+            &primary_road_east_2_3_g,
+            &primary_road_west_9_10_g,
+            &crossing_east,
+            &crossing_south,
+            &crossing_west
+        );
+        let mut crossroad_state = CrossroadState::AllRed;
         let mut time = 0; // in seconden
 
         let frequency_scheduler = sched::periodic_ms(1000);
@@ -101,9 +141,9 @@ fn spawn_main_loop( out_tx: Sender<String>,
                 break;
             }
 
-            print!("\n{:?} ", time);
+            print!("\n     {:?} ", time);
 
-            match crossroad.run_loop(time, &crossroad_state, sensor_shared_state.clone(), &out_tx) {
+            match crossroad.run_loop(time, &mut crossroad_state, sensor_shared_state.clone(), &out_tx) {
                 Some(newstate) => crossroad_state = newstate,
                 None => (),
             };
@@ -150,7 +190,7 @@ fn spawn_client_updater(mut writer: BufWriter<TcpStream>, rx: Receiver<String>) 
 
 #[test]
 fn send_json() {
-    let stoplicht = &StoplichtJson::new();
+    let stoplicht = &StoplichtJson::empty();
     let stringified = serde_json::to_string(stoplicht).unwrap();
 
     println!("before:\n{:?}\n\nafter:\n{:?}", stoplicht, stringified);
@@ -163,29 +203,62 @@ fn main_loop() {
     let (exit_main_loop_tx, exit_main_loop_rx) = channel();
     let client_baan_sensor_states = Arc::new(Mutex::new(SensorStates::new()));
 
+    let sensor_shared_state = client_baan_sensor_states.clone();
     {
-        let sensor_shared_state = client_baan_sensor_states.clone();
         let ref mut init_state = *sensor_shared_state.lock().unwrap();
 
         let now = time::now();
 
         init_state._debug_update_directly(vec![
+            /*
             Sensor { id: 6,  bezet: true, last_update: now - Duration::seconds(1000) },
             Sensor { id: 5,  bezet: true, last_update: now - Duration::seconds(5) },
             Sensor { id: 11, bezet: true, last_update: now - Duration::seconds(10) },
             Sensor { id: 4,  bezet: true, last_update: now - Duration::seconds(50) },
             Sensor { id: 9,  bezet: true, last_update: now - Duration::seconds(14) },
             Sensor { id: 7,  bezet: true, last_update: now - Duration::seconds(5) },
-            Sensor { id: 13, bezet: true, last_update: now - Duration::seconds(6) },
+            Sensor { id: 13, bezet: true, last_update: now - Duration::seconds(6) },*/
         ]);
     }
 
+    let sensor_shared_state_copy = client_baan_sensor_states.clone();
+    thread::spawn(move || {
+
+        thread::sleep_ms(13000);
+        {
+            println!("Sending simulated state #1: sensor 13 = true");
+            let ref mut traffic_state = *sensor_shared_state_copy.lock().unwrap();
+            traffic_state._debug_update_directly(vec![Sensor { id: 13, bezet: true, last_update: time::now() },]);
+        }
+
+        thread::sleep_ms(16000);
+        {
+            println!("Sending simulated state #2: sensor 13 = false");
+            let ref mut traffic_state = *sensor_shared_state_copy.lock().unwrap();
+            traffic_state._debug_update_directly(vec![Sensor { id: 13, bezet: false, last_update: time::now() },]);
+        }
+
+        thread::sleep_ms(25000);
+        {
+            println!("Sending simulated state #3: sensor 9 = true");
+            let ref mut traffic_state = *sensor_shared_state_copy.lock().unwrap();
+            traffic_state._debug_update_directly(vec![Sensor { id: 9, bezet: true, last_update: time::now() },]);
+        }
+    });
+
     let verkeer = spawn_main_loop(out_transmitter, exit_main_loop_rx, client_baan_sensor_states.clone());
 
-    println!("type to quit");
-    let mut input = String::new();
-    io::stdin().read_line(&mut input);
-    println!("You typed: {}", input.trim());
+    loop {
+        match out_receiver.recv() {
+            Ok(msg) => {
+                println!("Server->Client: sent new stoplicht state {:?}", msg)
+            },
+            Err(err) => {
+                println!("{:?}", err);
+                break;
+            }
+        };
+    }
 }
 
 #[test]
