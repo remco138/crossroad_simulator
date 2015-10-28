@@ -22,7 +22,7 @@
   (print "data sent: " data)
   (swap! state/ui-state assoc :last-packet data)
   (print (:last-packet @state/ui-state))
-  (comment (.write @client data)))
+  (.write @client data))
 
 (defn send-sensor-states! [xs]
   (send! (str (clj->json {:banen (reduce #(conj %1 {:id %2 :bezet true}) [] xs)}) "\n")))
