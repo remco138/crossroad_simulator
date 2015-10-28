@@ -8,6 +8,9 @@ use std::collections::HashMap;
 use std::sync::mpsc::{channel, Sender, Receiver};
 use time;
 use cartesian;
+use std::ops::Deref;
+
+
 
 // -------------------------------------------------------------------------------
 // Direction
@@ -59,170 +62,130 @@ pub struct Crossroad<'a> {
 
 impl<'a> Crossroad<'a> {
 
-    pub fn new(traffic_lights: &'a Vec<Control<'a>>,
-               primary_road_east_2_3: &'a Control<'a>,
-               primary_road_west_9_10 : &'a Control<'a>,
-               crossing_east:  &'a Crossing<'a>,
-               crossing_south: &'a Crossing<'a>,
-               crossing_west:  &'a Crossing<'a>,)
-            -> Crossroad<'a> {
+    pub fn new(indexed_controls: &'a Vec<&'a Control<'a>>) -> Crossroad<'a> {
+
+        let road_east_2_3                 = indexed_controls[ 2];
+        let road_west_9_10                = indexed_controls[ 9];
+        let west_bicycle_and_pedestrain   = indexed_controls[17];
+        let west_inner                    = indexed_controls[24];
+        let south_bicycle_and_pedestrain  = indexed_controls[19];
+        let south_inner                   = indexed_controls[27];
+        let east_bicycle_and_pedestrain   = indexed_controls[21];
+        let east_inner                    = indexed_controls[32];
 
         let mut directions = HashMap::new();
-
         directions.insert(Direction::North,
             XorConflictsGroup::new("noord".to_string(), vec![
-                traffic_lights[11].conflicting_with(vec![]),
-                traffic_lights[6].conflicting_with(vec![
-                    &traffic_lights[8], primary_road_west_9_10, // noord A
-                    &traffic_lights[12],                          // noord B
-                    primary_road_east_2_3,
+                indexed_controls[11].conflicting_with(vec![]),
+                indexed_controls[6].conflicting_with(vec![
+                    &indexed_controls[8], road_west_9_10,    // noord A
+                    &indexed_controls[12],                   // noord B
+                    road_east_2_3,
                 ]),
-                traffic_lights[1].conflicting_with(vec![
-                    &traffic_lights[8], primary_road_west_9_10, // noord A
-                    &traffic_lights[12],                        // noord B
-                    &traffic_lights[13],
-                    &traffic_lights[5],
+                indexed_controls[1].conflicting_with(vec![
+                    &indexed_controls[8], road_west_9_10,    // noord A
+                    &indexed_controls[12],                   // noord B
+                    &indexed_controls[13],
+                    &indexed_controls[5],
                 ]),
             ])
         );
 
         directions.insert(Direction::East,
             XorConflictsGroup::new("oost".to_string(), vec![
-                traffic_lights[7].conflicting_with(vec![]),
-                primary_road_east_2_3.conflicting_with(vec![
-                    &traffic_lights[5], &traffic_lights[6],   // oost A
-                    &traffic_lights[8],                       // oost B
-                    &traffic_lights[13]
+                indexed_controls[7].conflicting_with(vec![]),
+                road_east_2_3.conflicting_with(vec![
+                    &indexed_controls[5], &indexed_controls[6], // oost A
+                    &indexed_controls[8],                       // oost B
+                    &indexed_controls[13]
                 ]),
-                traffic_lights[12].conflicting_with(vec![
-                    &traffic_lights[5], &traffic_lights[6],   // oost A
-                    &traffic_lights[8],                       // oost B
-                    primary_road_west_9_10,
-                    &traffic_lights[1]
+                indexed_controls[12].conflicting_with(vec![
+                    &indexed_controls[5], &indexed_controls[6], // oost A
+                    &indexed_controls[8],                       // oost B
+                    road_west_9_10,
+                    &indexed_controls[1]
                 ]),
-                crossing_east.bicycle_and_pedestrain.conflicting_with(vec![
-                    &traffic_lights[8],
-                    primary_road_west_9_10,
-                    &traffic_lights[11],
+                east_bicycle_and_pedestrain.conflicting_with(vec![
+                    &indexed_controls[8],
+                    road_west_9_10,
+                    &indexed_controls[11],
                 ]),
             ])
         );
 
         directions.insert(Direction::South,
             XorConflictsGroup::new("zuid".to_string(), vec![
-                traffic_lights[4].conflicting_with(vec![]),
-                traffic_lights[13].conflicting_with(vec![
-                    &traffic_lights[1], primary_road_east_2_3,  // zuid A
-                    &traffic_lights[5],                         // zuid B
-                    &traffic_lights[13]
+                indexed_controls[4].conflicting_with(vec![]),
+                indexed_controls[13].conflicting_with(vec![
+                    &indexed_controls[1], road_east_2_3,    // zuid A
+                    &indexed_controls[5],                   // zuid B
+                    &indexed_controls[13]
                 ]),
-                traffic_lights[8].conflicting_with(vec![
-                    &traffic_lights[1], primary_road_east_2_3,  // zuid A
-                    &traffic_lights[5],                         // zuid B
-                    &traffic_lights[6],
-                    &traffic_lights[12]
+                indexed_controls[8].conflicting_with(vec![
+                    &indexed_controls[1], road_east_2_3,    // zuid A
+                    &indexed_controls[5],                   // zuid B
+                    &indexed_controls[6],
+                    &indexed_controls[12]
                 ]),
-                crossing_south.bicycle_and_pedestrain.conflicting_with(vec![
-                    &traffic_lights[5],
-                    &traffic_lights[6],
-                    &traffic_lights[7],
+                south_bicycle_and_pedestrain.conflicting_with(vec![
+                    &indexed_controls[5],
+                    &indexed_controls[6],
+                    &indexed_controls[7],
                 ]),
             ]),
         );
 
         directions.insert(Direction::West,
             XorConflictsGroup::new("west".to_string(), vec![
-                traffic_lights[14].conflicting_with(vec![]),
-                primary_road_west_9_10.conflicting_with(vec![
-                    &traffic_lights[12], &traffic_lights[13],   // west A
-                    &traffic_lights[1],                         // west B
-                    &traffic_lights[6]
+                indexed_controls[14].conflicting_with(vec![]),
+                road_west_9_10.conflicting_with(vec![
+                    &indexed_controls[12], &indexed_controls[13], // west A
+                    &indexed_controls[1],                         // west B
+                    &indexed_controls[6]
                 ]),
-                traffic_lights[5].conflicting_with(vec![
-                    &traffic_lights[12], &traffic_lights[13],   // west A
-                    &traffic_lights[1],                         // west B
-                    primary_road_east_2_3,
-                    &traffic_lights[8]
+                indexed_controls[5].conflicting_with(vec![
+                    &indexed_controls[12], &indexed_controls[13], // west A
+                    &indexed_controls[1],                         // west B
+                    road_east_2_3,
+                    &indexed_controls[8]
                 ]),
-                crossing_west.bicycle_and_pedestrain.conflicting_with(vec![
-                    &traffic_lights[1],
-                    primary_road_east_2_3,
-                    &traffic_lights[4],
+                west_bicycle_and_pedestrain.conflicting_with(vec![
+                    &indexed_controls[1],
+                    road_east_2_3,
+                    &indexed_controls[4],
                 ]),
             ])
         );
 
+        let primary_traffic = vec![
+            road_east_2_3,  &indexed_controls[4],
+            road_west_9_10, &indexed_controls[11],
+        ];
+
         Crossroad {
-            traffic_controls: vec![
-                &traffic_lights[0],
-                &traffic_lights[1],
-                primary_road_east_2_3,
-                primary_road_east_2_3,
-                &traffic_lights[4],
-                &traffic_lights[5],
-                &traffic_lights[6],
-                &traffic_lights[7],
-                &traffic_lights[8],
-                primary_road_west_9_10,
-                primary_road_west_9_10,
-                &traffic_lights[11],
-                &traffic_lights[12],
-                &traffic_lights[13],
-                &traffic_lights[14],
-                &traffic_lights[15],
-                &traffic_lights[16],
-                &crossing_west.bicycle_and_pedestrain,
-                &traffic_lights[18],    // does not exist !
-                &crossing_south.bicycle_and_pedestrain,  // 19
-                &crossing_south.bicycle_and_pedestrain,  // 20
-                &crossing_east.bicycle_and_pedestrain,   // 21
-                &crossing_east.bicycle_and_pedestrain,   // 22
-                &crossing_west.bicycle_and_pedestrain,   // 23
-                &traffic_lights[24],    // inner pedestrian west
-                &crossing_west.bicycle_and_pedestrain,
-                &traffic_lights[26],    // inner pedestrian west
-                &traffic_lights[27],    // inner pedestrian south
-                &crossing_south.bicycle_and_pedestrain,
-                &crossing_south.bicycle_and_pedestrain,
-                &traffic_lights[30],    // inner pedestrian south
-                &crossing_east.bicycle_and_pedestrain,
-                &crossing_east.bicycle_and_pedestrain,
-                &traffic_lights[33],    // inner pedestrian east
-                &traffic_lights[34],    // inner pedestrian east
-            ],
-            primary_group: SignalGroup::new(vec![
-                primary_road_east_2_3,
-                &traffic_lights[4],
-                primary_road_west_9_10,
-                &traffic_lights[11]],
-                true
-            ),
-            primary_traffic: vec![
-                primary_road_east_2_3,
-                &traffic_lights[4],
-                primary_road_west_9_10,
-                &traffic_lights[11],
-            ],
+            traffic_controls: indexed_controls.clone(),
+            primary_group: SignalGroup::new(primary_traffic.clone(), true),
+            primary_traffic: primary_traffic.clone(),
             secondary_traffic: vec![
-                &traffic_lights[0],
-                &traffic_lights[1],
-                &traffic_lights[5],
-                &traffic_lights[6],
-                &traffic_lights[7],
-                &traffic_lights[8],
-                &traffic_lights[12],
-                &traffic_lights[13],
-                &traffic_lights[14],
-                &crossing_east.bicycle_and_pedestrain,
-                &crossing_south.bicycle_and_pedestrain,
-                &crossing_west.bicycle_and_pedestrain,
+                &indexed_controls[0],
+                &indexed_controls[1],
+                &indexed_controls[5],
+                &indexed_controls[6],
+                &indexed_controls[7],
+                &indexed_controls[8],
+                &indexed_controls[12],
+                &indexed_controls[13],
+                &indexed_controls[14],
+                &east_bicycle_and_pedestrain,
+                &south_bicycle_and_pedestrain,
+                &west_bicycle_and_pedestrain,
             ],
             priority_traffic: vec![
-                &crossing_east.inner_pedestrian,
-                &crossing_south.inner_pedestrian,
-                &crossing_west.inner_pedestrian,
-                &traffic_lights[15],
-                &traffic_lights[16],
+                &east_inner,
+                &south_inner,
+                &west_inner,
+                &indexed_controls[15],
+                &indexed_controls[16],
             ],
             directions: directions,
         }
@@ -411,63 +374,69 @@ impl<'a> Crossroad<'a> {
     pub fn get_traffic_control(&'a self, id: usize) -> Option<&'a Control> {
         self.traffic_controls.get(id).map(|c|*c)
     }
+
+    pub fn traffic_controls_unique(&'a self) -> HashSet<&'a Control<'a>> {
+        self.traffic_controls.clone().into_iter().collect()
+    }
+
+    pub fn send_all(&'a self, out_tx: &Sender<String>, state: JsonState) {
+        for control in &self.traffic_controls_unique() {
+            control.send_unsafe(out_tx, state)
+        }
+    }
+
+    pub fn send_all_bulk(&'a self, out_tx: &Sender<String>, state: JsonState) {
+        let all_objs = self.traffic_controls_unique().iter().flat_map(|c| c.json_objs(state)).collect();
+        out_tx.send(ClientJson::from(all_objs).serialize().unwrap());
+    }
 }
 
-pub fn generate_traffic_lights() -> Vec<TrafficLight> {
-    vec![
-        // roads
-        TrafficLight::new(0, Direction::North, Type::Vehicle),
 
-        TrafficLight::new(1, Direction::North,  Type::Vehicle),
-        TrafficLight::new(2, Direction::East,   Type::Primary),
-        TrafficLight::new(3, Direction::East,   Type::Primary),
-        TrafficLight::new(4, Direction::South,  Type::Primary),
-
-        TrafficLight::new(5, Direction::West,   Type::Vehicle),
-        TrafficLight::new(6, Direction::North,  Type::Vehicle),
-        TrafficLight::new(7, Direction::East,   Type::Vehicle),
-
-        TrafficLight::new(8, Direction::South,  Type::Vehicle),
-        TrafficLight::new(9, Direction::West,   Type::Primary),
-        TrafficLight::new(10, Direction::West,  Type::Primary),
-        TrafficLight::new(11, Direction::North, Type::Primary),
-
-        TrafficLight::new(12, Direction::East,  Type::Vehicle),
-        TrafficLight::new(13, Direction::South, Type::Vehicle),
-        TrafficLight::new(14, Direction::West,  Type::Vehicle),
-
-        // bus
-        TrafficLight::new(15, Direction::East,  Type::Vehicle),
-        TrafficLight::new(16, Direction::West,  Type::Vehicle),
-
-        // bycicle
-        TrafficLight::new(17, Direction::South, Type::Rest),
-        TrafficLight::new(18, Direction::South, Type::Rest),
-
-        TrafficLight::new(19, Direction::East, Type::Rest),
-        TrafficLight::new(20, Direction::West, Type::Rest),
-
-        TrafficLight::new(21, Direction::South, Type::Rest),
-        TrafficLight::new(22, Direction::North, Type::Rest),
-
-        // pedestrian
-        TrafficLight::new(23, Direction::South, Type::Rest),
-        TrafficLight::new(24, Direction::North, Type::Rest),
-        TrafficLight::new(25, Direction::North, Type::Rest),
-        TrafficLight::new(26, Direction::South, Type::Rest),
-
-        TrafficLight::new(27, Direction::West, Type::Rest),
-        TrafficLight::new(28, Direction::East, Type::Rest),
-        TrafficLight::new(29, Direction::West, Type::Rest),
-        TrafficLight::new(30, Direction::East, Type::Rest),
-
-        TrafficLight::new(31, Direction::North, Type::Rest),
-        TrafficLight::new(32, Direction::South, Type::Rest),
-        TrafficLight::new(33, Direction::North, Type::Rest),
-        TrafficLight::new(34, Direction::South, Type::Rest),
-    ]
+pub struct ControlsBuilder<'a> {
+    pub tlights: &'a TrafficLightsBuilder,
+    pub groups: Vec<TrafficGroup<'a>>,
 }
 
-pub fn to_controls(v: &Vec<TrafficLight>) -> Vec<Control> {
-    v.iter().map(|tl| Control::Single(tl)).collect()
+impl <'a>ControlsBuilder<'a> {
+    pub fn new(tlights: &'a TrafficLightsBuilder) -> ControlsBuilder<'a> {
+        ControlsBuilder { tlights: tlights, groups: vec![] }
+    }
+    pub fn add_group(mut self, ids: Vec<usize>, d: Direction, t: Type) -> Self {
+        let traffic_lights = ids.into_iter().map(|id| &self.tlights.traffic_lights[id]).collect();
+        self.groups.push(TrafficGroup::from(traffic_lights, d, t));
+        self
+    }
+
+    pub fn create_controls(self) -> Vec<Control<'a>> {
+        let mut tl_controls = self.tlights.as_controls();
+
+        // Remove all the traffic lights which have been added to a group
+        for group in self.groups.iter() {
+            for id in group.get_ids() {
+                if let Some(index) = tl_controls.iter().position(|tlc| tlc.contains(id)) {
+                    println!("Removing tl control @ index {:?}, id: {:?}", index, id);
+                    tl_controls.remove(index);
+                }
+            }
+        }
+
+        // Add each group as Control
+        for group in self.groups.into_iter() {
+            tl_controls.push(Control::Group(group));
+        }
+
+        tl_controls
+    }
+}
+
+pub fn index_controls<'a, 'b>(input: &'b Vec<Control<'a>>) -> Vec<&'b Control<'a>> {
+    let length = input.iter().flat_map(|c| c.get_ids()).max().unwrap();
+    let mut vec = Vec::with_capacity(length);
+
+    for i in (0..length+1) {
+        vec.push(input.iter().find(|c| c.contains(i)).unwrap());
+        println!("!!!!!!{:?} en {:?}", i ,vec[i] );
+    }
+
+    vec
 }

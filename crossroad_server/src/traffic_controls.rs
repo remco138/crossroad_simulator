@@ -105,12 +105,12 @@ impl <'a>ControlWithState<'a>  {
 // Control
 // -------------------------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, Eq, Hash)]
 pub enum Control<'a> {
-    Group(&'a TrafficGroup<'a>),
+    Group(TrafficGroup<'a>),
     Single(&'a TrafficLight)
 }
-
+/*
 impl <'a>From<&'a TrafficGroup<'a>> for Control<'a> {
     fn from(t: &'a TrafficGroup<'a>) -> Control<'a> {
         Control::Group(t)
@@ -119,6 +119,14 @@ impl <'a>From<&'a TrafficGroup<'a>> for Control<'a> {
 impl <'a>From<&'a TrafficLight> for Control<'a> {
     fn from(t: &'a TrafficLight) -> Control<'a> {
         Control::Single(t)
+    }
+}
+*/
+impl <'a>PartialEq for Control<'a> {
+    fn eq(&self, other: &Control) -> bool {
+        let address_self = self as *const Control;
+        let address_other = other as *const Control;
+        address_self == address_other
     }
 }
 
@@ -242,6 +250,7 @@ impl <'a, 'b>fmt::Debug for ControlSensor<'a, 'b> {
 // TrafficGroup
 // -------------------------------------------------------------------------------
 
+#[derive(PartialEq, Eq, Hash)]
 pub struct TrafficGroup<'a> {
     pub traffic_lights: Vec<&'a TrafficLight>,
     pub direction: Direction,
@@ -280,6 +289,7 @@ impl <'a>fmt::Debug for TrafficGroup<'a> {
 // TrafficLight
 // -------------------------------------------------------------------------------
 
+#[derive(PartialEq, Eq, Hash)]
 pub struct TrafficLight {
     pub id: usize,
     pub direction: Direction,
@@ -306,10 +316,41 @@ impl fmt::Debug for TrafficLight {
 
 
 // -------------------------------------------------------------------------------
+// TrafficLightsBuilder
+// -------------------------------------------------------------------------------
+
+pub struct TrafficLightsBuilder {
+    pub traffic_lights: Vec<TrafficLight>,
+}
+
+impl <'a>TrafficLightsBuilder {
+    pub fn new(count: usize) -> TrafficLightsBuilder {
+        TrafficLightsBuilder { traffic_lights: (0..count+1).map(|i| TrafficLight::new(i, Direction::North, Type::Vehicle)).collect() }
+    }
+    pub fn set_direction(mut self, d: Direction, ids: Vec<usize>) -> TrafficLightsBuilder {
+        for id in ids { self.traffic_lights[id].direction = d }
+        self
+    }
+    pub fn set_type(mut self, t: Type, ids: Vec<usize>) -> TrafficLightsBuilder {
+        for id in ids { self.traffic_lights[id].traffic_type = t }
+        self
+    }
+    pub fn set_type_range(mut self, t: Type, from: usize, to: usize) -> TrafficLightsBuilder {
+        for id in (from..to) { self.traffic_lights[id].traffic_type = t }
+        self
+    }
+
+    pub fn as_controls(&'a self) -> Vec<Control<'a>> {
+        self.traffic_lights.iter().map(|tl| Control::Single(tl)).collect()
+    }
+}
+
+
+// -------------------------------------------------------------------------------
 // TrafficType
 // -------------------------------------------------------------------------------
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
     Primary,
     Vehicle,

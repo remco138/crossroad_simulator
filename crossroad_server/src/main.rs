@@ -22,7 +22,7 @@ use std::sync::mpsc::{channel, Sender, Receiver};
 use std::fs::File;
 use std::path::Path;
 use std::fs::OpenOptions;
-
+use std::collections::HashMap;
 
 use crossroad_server::crossroad::*;
 use crossroad_server::traffic_protocol::*;
@@ -108,54 +108,38 @@ fn spawn_main_loop( out_tx: Sender<String>,
  {
     thread::spawn(move || {
 
-        let traffic_lights = generate_traffic_lights();
-        let traffic_light_controls = to_controls(&traffic_lights);
+        let mut tlights_builder = TrafficLightsBuilder::new(34)
+             .set_direction(Direction::North, vec![ 1,6,11,22,24,25,31,33 ])
+             .set_direction(Direction::East,  vec![ 2,3,7,12,15,19,28,30 ])
+             .set_direction(Direction::South, vec![ 4,8,13,17,18,21,23,26,32,34 ])
+             .set_direction(Direction::West,  vec![ 5,9,10,14,16,20,27,29 ])
+             .set_type(Type::Primary, vec![ 2,3,4,   9,10,11 ])
+             .set_type_range(Type::Rest, 17, 34);
 
-        let primary_road_east_2_3 = &TrafficGroup::from(vec![&traffic_lights[2], &traffic_lights[3]], Direction::East, Type::Primary);
-        let primary_road_east_2_3_g = Control::Group(primary_road_east_2_3);
+        let mut traffic_controls = ControlsBuilder::new(&tlights_builder)
+             .add_group(vec![ 2, 3], Direction::East, Type::Primary)
+             .add_group(vec![ 9,10], Direction::West, Type::Primary)
+             .add_group(vec![17,23, 25],     Direction::West,  Type::Rest)
+             .add_group(vec![24,26],         Direction::West,  Type::Rest)
+             .add_group(vec![19,20, 28,29],  Direction::South, Type::Rest)
+             .add_group(vec![27,30],         Direction::South, Type::Rest)
+             .add_group(vec![21,22, 31,34],  Direction::East,  Type::Rest)
+             .add_group(vec![32,33],         Direction::East,  Type::Rest)
+             .create_controls();
 
-        let primary_road_west_9_10 = &TrafficGroup::from(vec![&traffic_lights[9], &traffic_lights[10]], Direction::West, Type::Primary);
-        let primary_road_west_9_10_g = Control::Group(primary_road_west_9_10);
+        let indexed_controls = index_controls(&traffic_controls);
 
-        let west_inner = &TrafficGroup::with(vec![&traffic_lights[24], &traffic_lights[26]], Type::Rest);
-        let west_byc_ped = &TrafficGroup::from(
-            vec![&traffic_lights[17], &traffic_lights[23], &traffic_lights[25]],
-            Direction::West,
-            Type::Rest
-        );
-
-        let south_inner = &TrafficGroup::with(vec![&traffic_lights[27], &traffic_lights[30]], Type::Rest);
-        let south_byc_ped = &TrafficGroup::from(
-            vec![&traffic_lights[19], &traffic_lights[20],   // bycicle
-                 &traffic_lights[28], &traffic_lights[29]],  // pedestrian
-             Direction::South,
-             Type::Rest
-        );
-
-        let east_inner = &TrafficGroup::with(vec![&traffic_lights[32], &traffic_lights[33]], Type::Rest);
-        let east_byc_ped = &TrafficGroup::from(
-            vec![&traffic_lights[21], &traffic_lights[22],   // bycicle
-                 &traffic_lights[31], &traffic_lights[34]],  // pedestrian
-             Direction::East,
-             Type::Rest
-        );
-
-        let crossing_east = Crossing::from(Control::Group(east_byc_ped), Control::Group(east_inner), Direction::East);
-        let crossing_south = Crossing::from(Control::Group(south_byc_ped), Control::Group(south_inner), Direction::South);
-        let crossing_west = Crossing::from(Control::Group(west_byc_ped), Control::Group(west_inner), Direction::West);
-
-        let crossroad = Crossroad::new(
-            &traffic_light_controls,
-            &primary_road_east_2_3_g,
-            &primary_road_west_9_10_g,
-            &crossing_east,
-            &crossing_south,
-            &crossing_west
-        );
+        let crossroad = Crossroad::new(&indexed_controls);
         let mut crossroad_state = CrossroadState::AllRed;
         let mut time = 0; // in seconden
 
         let frequency_scheduler = sched::periodic_ms(1000);
+
+        if true { // TESTS
+            crossroad.send_all_bulk(&out_tx, JsonState::Groen);
+            crossroad.send_all(&out_tx, JsonState::Geel);
+            crossroad.send_all_bulk(&out_tx, JsonState::Rood);
+        }
 
         loop {
             time = time + 1;
@@ -186,7 +170,7 @@ fn spawn_client_sensor_receiver(mut reader: BufReader<TcpStream>, sensor_data: A
             //let line_trimmed = &line[0..(line.len()-1)];
             let ref mut traffic_state = *sensor_data.lock().unwrap();
 
-            log_file.write(format!("\n\n{}\n", time::now().strftime("%T").unwrap()).as_bytes());
+            log_file.write(format!("\n{}\n", time::now().strftime("%T").unwrap()).as_bytes());
             log_file.write_all(&line.as_bytes());
 
             match traffic_state.update_from_json(&line) {
