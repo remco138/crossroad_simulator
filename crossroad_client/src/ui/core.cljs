@@ -33,6 +33,21 @@
    [:button  {:on-click #(network/connect! 9990)} "(re)connect"]
    [:button  {:on-click #(network/send! "ayyyyy\r\n")} "send data"]
    [:br]
+
+   [:input {:type "text"
+            :value (:connect-ip @state/ui-state)
+            :name "ip"
+            :on-change (fn [x]
+                         (swap! state/ui-state assoc :connect-ip (-> x .-target .-value .parseInt)))}]
+   [:input {:type "text"
+            :value (:connect-port @state/ui-state)
+            :name "port"
+            :on-change (fn [x]
+                         (swap! state/ui-state assoc :connect-port (-> x .-target .-value)))}]
+   [:button {:on-click #(network/connect! (@state/ui-state :connect-ip) (@state/ui-state :connect-port))}
+    "connect!"]
+
+   [:br]
    [:span "car spee multiplier "]
    [:input {:type "range"
             :value (:speed @state/ui-state)
@@ -65,7 +80,9 @@
 (defn init! []
   (js/paper.setup(js/document.getElementById "mycanvas"))
   (set! js/paper.view.onFrame (var drawing/on-frame))
-  (network/connect! 9990)
+  ;(network/connect!  "127.0.0.1" 9990)
+
+
   (state/init!)
   (drawing/init!)
   (sensors/track-sensors!))

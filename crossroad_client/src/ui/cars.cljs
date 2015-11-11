@@ -36,9 +36,9 @@
 ;  ())
 (defn trigger-sensors! [car sensor-list]
   (let [index (-> car :road :light)
-        sensor (sensor-list index)]
-    (when (.contains (:car car) (.-position (:point sensor)))
-          (go (>! (:chan sensor) index)))))
+        sensor (sensor-list index)
+        state (.contains (:car car) (.-position (:point sensor)))]
+    (go (>! (:chan sensor) {:bezet state :id index}))))
 
 
 (defn may-move? [car lights-state sensor-list]
@@ -72,7 +72,9 @@
                 (recur (+ x (:speed @state/ui-state))))
 
               :default
-              (recur x)
+              (do
+                (trigger-sensors! car sensors)
+                (recur x))
               ))))
 
 
