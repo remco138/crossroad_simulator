@@ -169,6 +169,7 @@ fn spawn_client_sensor_receiver(mut reader: BufReader<TcpStream>, sensor_data: A
         loop {
             let mut line = String::new();
 
+            //stdin.read_until(b'a', &mut buffer));
             try!(reader.read_line(&mut line));
             //let line_trimmed = &line[0..(line.len()-1)];
             let ref mut traffic_state = *sensor_data.lock().unwrap();
@@ -192,7 +193,7 @@ fn spawn_client_updater(mut writer: BufWriter<TcpStream>, rx: Receiver<String>, 
                     log_file.write(format!("\n\n{}\n", time::now().strftime("%T").unwrap()).as_bytes());
                     log_file.write_all(&msg.as_bytes());
 
-                    try!(writer.write(&msg.as_bytes()));
+                    try!(writer.write(format!("{}\r\n", &msg).as_bytes()));
                     try!(writer.flush());
                     println!("Server->Client: sent new stoplicht state {:?}", msg);
                 },

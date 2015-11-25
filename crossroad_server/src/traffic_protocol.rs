@@ -47,7 +47,7 @@ impl SensorStates {
     }
 
     pub fn update(&mut self, banen_json: BanenJson) -> BanenJson {
-        for sensor in banen_json.banen.iter() {
+        for sensor in banen_json.stoplichten.iter() {
             self.sensors[sensor.id].bezet = sensor.bezet;
 
             if sensor.bezet {
@@ -94,7 +94,7 @@ impl fmt::Debug for SensorStates {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct BanenJson {
-    pub banen: Vec<BaanSensorJson>
+    pub stoplichten: Vec<BaanSensorJson>
 }
 
 #[derive(Deserialize, Debug, Copy, Clone)]
@@ -144,12 +144,12 @@ impl JsonState {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ClientJson {
-    pub banen: Vec<StoplichtJson>
+    pub stoplichten: Vec<StoplichtJson>
 }
 
 impl ClientJson {
     pub fn from(banen: Vec<StoplichtJson>) -> ClientJson {
-        ClientJson { banen: banen }
+        ClientJson { stoplichten: banen }
     }
     pub fn serialize(&self) -> serde_json::error::Result<String> {
         serde_json::to_string(self)
