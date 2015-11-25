@@ -52,10 +52,13 @@
 
 
 (defn trigger-sensors! [car sensor-list]
-  (let [index (-> car :road :light)
-        sensor (sensor-list index)
-        state (.contains (:car car) (.-position (:point sensor)))]
-    (go (>! (:chan sensor) {:bezet state :id index}))))
+  (when (-> car :road :light)
+    (let [indexes (-> car :road :light)
+             sensors (map sensor-list indexes)
+             state (map #(.contains (:car car) (.-position (:point %))) sensors)]
+         ;(print indexes)
+         ;(print sensors)
+         (go (>! (:chan (first sensors)) {:bezet (first state) :id (first indexes)})))))
 
 
 (defn may-move? [car lights-state sensor-list]
@@ -87,12 +90,12 @@
               (may-move? car @state/lights sensors)
               (do
                 (set! (.-position (:car car)) (.getPointAt path x))
-                ;(trigger-sensors! car sensors)
+                (trigger-sensors! car sensors)
                 (recur (+ x (* (:speed car) (:speed @state/ui-state)))))
 
               :default
               (do
-                ;(trigger-sensors! car sensors)
+                (trigger-sensors! car sensors)
                 (recur x))
               ))))
 

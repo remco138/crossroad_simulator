@@ -21,7 +21,6 @@
 
 
 (defn send! [data]
-  (print "data sent: " data)
   (swap! state/ui-state assoc :last-packet data)
   (print (:last-packet @state/ui-state))
   (.write @client data))
@@ -32,7 +31,6 @@
                           }) "\n")))
 
 (defn on-connect []
-  ;(.write @client "<client>: hello")
   (print "we might have connected to the server and sent our greetings!"))
 
 (defn on-data [data]
