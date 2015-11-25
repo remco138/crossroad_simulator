@@ -23,13 +23,26 @@
 (defn spawn-car! []
   (let [car (state/add-car-channel! (cars/random-car　(:roads @state/state)))]
     (cars/car-ai (:chan car) car 0)))
+(defn spawn-walker! []
+  (let [car (state/add-car-channel! (cars/random-walker　(:pedestrian-roads @state/state)))]
+    (cars/car-ai (:chan car) car 0)))
+(defn spawn-bus! []
+  (let [car (state/add-car-channel! (cars/random-bus　(:bus-roads @state/state)))]
+    (cars/car-ai (:chan car) car 0)))
+(defn spawn-cyclist! []
+  (let [car (state/add-car-channel! (cars/random-cyclist　(:cycling-roads @state/state)))]
+    (cars/car-ai (:chan car) car 0)))
 
 (defn root-component []
   [:div
    [:canvas {:id "mycanvas" :width "967" :height "459"}]
    [:textarea {:id "logger":readOnly true :rows 5 :cols 30 :placeholder  "logger" :value (:last-packet @state/ui-state)}]
    [:br]
-   [:button  {:on-click spawn-car!} "yeee boiii. add a car"]
+   [:button  {:on-click spawn-car!} "spawn car"]
+   [:button  {:on-click spawn-walker!} "spawn pedestrian"]
+   [:button  {:on-click spawn-bus!} "spawn bus"]
+   [:button  {:on-click spawn-cyclist!} "spawn cyclist"]
+   [:br]
    [:button  {:on-click #(network/connect! 9990)} "(re)connect"]
    [:button  {:on-click #(network/send! "ayyyyy\r\n")} "send data"]
    [:br]
