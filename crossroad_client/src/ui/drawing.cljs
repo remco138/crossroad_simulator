@@ -13,6 +13,16 @@
   (doseq [p (:roads @state/state)]
     (-> p val :path
         (-> (.-strokeColor) (set! "black") )))
+  (doseq [p (:bus-roads @state/state)]
+    (-> p val :path
+        (-> (.-strokeColor) (set! "red") )))
+  (doseq [p (:cycling-roads @state/state)]
+    (-> p val :path
+        (-> (.-strokeColor) (set! "green") )))
+  (doseq [p (:pedestrian-roads @state/state)]
+    (-> p val :path
+        (-> (.-strokeColor) (set! "orange") )))
+
 
   (doseq [p (:traffic-lights @state/state)]
     (-> p val :point

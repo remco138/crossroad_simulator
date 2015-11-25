@@ -23,15 +23,43 @@
 (defn spawn-car! []
   (let [car (state/add-car-channel! (cars/random-car　(:roads @state/state)))]
     (cars/car-ai (:chan car) car 0)))
+(defn spawn-walker! []
+  (let [car (state/add-car-channel! (cars/random-walker　(:pedestrian-roads @state/state)))]
+    (cars/car-ai (:chan car) car 0)))
+(defn spawn-bus! []
+  (let [car (state/add-car-channel! (cars/random-bus　(:bus-roads @state/state)))]
+    (cars/car-ai (:chan car) car 0)))
+(defn spawn-cyclist! []
+  (let [car (state/add-car-channel! (cars/random-cyclist　(:cycling-roads @state/state)))]
+    (cars/car-ai (:chan car) car 0)))
 
 (defn root-component []
   [:div
    [:canvas {:id "mycanvas" :width "967" :height "459"}]
    [:textarea {:id "logger":readOnly true :rows 5 :cols 30 :placeholder  "logger" :value (:last-packet @state/ui-state)}]
    [:br]
-   [:button  {:on-click spawn-car!} "yeee boiii. add a car"]
+   [:button  {:on-click spawn-car!} "spawn car"]
+   [:button  {:on-click spawn-walker!} "spawn pedestrian"]
+   [:button  {:on-click spawn-bus!} "spawn bus"]
+   [:button  {:on-click spawn-cyclist!} "spawn cyclist"]
+   [:br]
    [:button  {:on-click #(network/connect! 9990)} "(re)connect"]
    [:button  {:on-click #(network/send! "ayyyyy\r\n")} "send data"]
+   [:br]
+
+   [:input {:type "text"
+            :value (:connect-ip @state/ui-state)
+            :name "ip"
+            :on-change (fn [x]
+                         (swap! state/ui-state assoc :connect-ip (-> x .-target .-value .parseInt)))}]
+   [:input {:type "text"
+            :value (:connect-port @state/ui-state)
+            :name "port"
+            :on-change (fn [x]
+                         (swap! state/ui-state assoc :connect-port (-> x .-target .-value)))}]
+   [:button {:on-click #(network/connect! (@state/ui-state :connect-ip) (@state/ui-state :connect-port))}
+    "connect!"]
+
    [:br]
    [:span "car spee multiplier "]
    [:input {:type "range"
@@ -65,7 +93,9 @@
 (defn init! []
   (js/paper.setup(js/document.getElementById "mycanvas"))
   (set! js/paper.view.onFrame (var drawing/on-frame))
-  (network/connect! 9990)
+  ;(network/connect!  "127.0.0.1" 9990)
+
+
   (state/init!)
   (drawing/init!)
   (sensors/track-sensors!))
