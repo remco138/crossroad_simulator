@@ -132,6 +132,7 @@ impl<'a> Crossroad<'a> {
                     &indexed_controls[6],
                     &indexed_controls[7],
                 ]),
+                indexed_controls[0].conflicting_with(vec![])
             ]),
         );
 
