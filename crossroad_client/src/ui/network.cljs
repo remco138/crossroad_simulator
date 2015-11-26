@@ -17,24 +17,33 @@
   [ds]
   (.stringify js/JSON (clj->js ds)))
 
-(defn json->obj [x] (.parse js/JSON x))
+(defn json->obj [x]
+  (.parse js/JSON x))
 
 
 (defn send! [data]
   (swap! state/ui-state assoc :last-packet data)
-  (print (:last-packet @state/ui-state))
-  (.write @client data))
+  ;(print (:last-packet @state/ui-state))
+  (when-not (nil? @client)
+    (.write @client data)))
 
 
 (defn send-sensor-states! [xs]
-  (send! (str (clj->json {:banen xs
+  (send! (str (clj->json {:stoplichten xs
                           }) "\n")))
 
 (defn on-connect []
   (print "we might have connected to the server and sent our greetings!"))
 
 (defn on-data [data]
-  (state/reset-light-states! (.-banen (json->obj data))))
+  (when (< 5 (.-length data))
+    (let [until (.search data "\r\n")
+          splitted (.substring data 0 until)]
+      (print "splitted: " splitted "\n")
+      (state/reset-light-states! (.-stoplichten (json->obj splitted)))
+      (print "SLICED"(.slice data until))
+      (on-data (.slice data (inc until))))
+    ))
 
 
 (defn connect!

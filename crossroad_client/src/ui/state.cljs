@@ -87,7 +87,7 @@
   (comment (def sensors-chan (atom (async/merge (map #(-> % val :chan) (:sensors @state)))))))
 
 
-(def ui-state (r/atom {:speed 3 :sensor-refresh 1000 :last-packed "last-packet" :connect-ip "127.0.0.1" :connect-port 9990}))
+(def ui-state (r/atom {:speed 3 :sensor-refresh 300 :last-packed "last-packet" :connect-ip "127.0.0.1" :connect-port 9990}))
 
 (def cars (atom []))
 (def lights (atom [0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 0 0 0 0 1]))

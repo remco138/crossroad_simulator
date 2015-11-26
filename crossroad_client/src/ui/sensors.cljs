@@ -17,6 +17,6 @@
 
                (if-let [v (first (alts! [sensors t]))]
                  (recur (conj result v) t)
-                 (do (print result) (network/send-sensor-states! result))))
+                 (do (comment (print result)) (network/send-sensor-states! result))))
 
              (recur))))
