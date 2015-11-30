@@ -78,8 +78,6 @@
                                    (when-not (or (empty? dangerous-cars) (nil? future-position))
                                      (<= 1 (count (filter (fn [x] (> 5 (.-length (.subtract future-position x)))) dangerous-cars))))
 
-                                    ; (print "asdasd"))
-                                       ;(< 2 (count (filter #(.contains (:car car) %) dangerous-cars)))))
                                    (and
                                     ;the traffic light allows us to move (green/orange => 1, 2)
                                     (== light-state 0)
@@ -96,14 +94,15 @@
 
 (defn car-ai [ch car x]
   (let [id (rand-int 99999)
-        perf-rate 2]
+        perf-rate 15]
     (go-loop [x 0
               tick 15
               dangerous-cars []]
              (let [data (<! ch)
                    path (:path (:road car))
                    sensors (:sensors @state/state)
-                   x-add (* (:speed car) (:speed @state/ui-state))]
+                   x-add (* (:speed car) (:speed @state/ui-state))
+                   may-move (may-move? car @state/lights sensors dangerous-cars (.getPointAt path (+ 12 x)))]
                (cond
                 ;end of life?
                 (>= x (.-length path))
@@ -114,7 +113,7 @@
                 (recur x (inc tick) (find-dangerous-cars car (vals @state/cars-location-ahead)))
 
                 ;are we allowed to move? traffic light? car infront? intersecting car nearby?
-                (may-move? car @state/lights sensors dangerous-cars (.getPointAt path (+ 12 x)))
+                may-move
                 (do
                   (set! (.-position (:car car)) (.getPointAt path x))
                   (trigger-sensors! car sensors)
@@ -125,13 +124,5 @@
                 (do
                   (trigger-sensors! car sensors)
                   (swap! state/cars-location-ahead assoc id  (.getPointAt path  x))
-                  (recur x (inc tick) dangerous-cars))
+                  (recur x tick dangerous-cars))
                 )))))
-
-
-
-;todo:
-;pass state of other cars
-;filter cars with roads that intersect (include own road)
-;check if overlap with getPointAt(tick + magicdistance)
-;->halt
