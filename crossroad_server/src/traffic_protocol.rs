@@ -47,7 +47,7 @@ impl SensorStates {
     }
 
     pub fn update(&mut self, banen_json: BanenJson) -> BanenJson {
-        for sensor in banen_json.stoplichten.iter() {
+        for sensor in banen_json.banen.iter() {
             self.sensors[sensor.id].bezet = sensor.bezet;
 
             if sensor.bezet {
@@ -94,7 +94,7 @@ impl fmt::Debug for SensorStates {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct BanenJson {
-    pub stoplichten: Vec<BaanSensorJson>
+    pub banen: Vec<BaanSensorJson>
 }
 
 #[derive(Deserialize, Debug, Copy, Clone)]
