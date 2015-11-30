@@ -90,7 +90,8 @@
 (def ui-state (r/atom {:speed 3 :sensor-refresh 300 :last-packed "last-packet" :connect-ip "127.0.0.1" :connect-port 9990}))
 
 (def cars (atom []))
-(def lights (atom [0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 0 0 0 0 1]))
+(def lights (atom [0 0 0 0 2 2 2 2 2 2 0 0 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 0 0 0 0 1]))
+(def cars-location-ahead (atom {}))
 
 (defn reset-light-states! [ls]
   (reset! lights (reduce #(assoc %1 (.-id %2) (.-status %2)) @lights ls)))

@@ -44,9 +44,10 @@
 ;----------
 ;Car AI
 ;----------
-(defn destroy-car! [ch car]
+(defn destroy-car! [ch car id]
   (reset! state/cars (remove #(identical? car %) @state/cars))
   (.remove (:car car))
+  (swap! state/cars-location-ahead dissoc id)
   (close! ch))
 
 
@@ -56,48 +57,76 @@
     (let [indexes (-> car :road :light)
              sensors (map sensor-list indexes)
              state (map #(.contains (:car car) (.-position (:point %))) sensors)]
-         ;(print indexes)
-         ;(print sensors)
          (go (>! (:chan (first sensors)) {:bezet (first state) :id (first indexes)})))))
 
 
-(defn may-move? [car lights-state sensor-list]
+
+;(when-not (empty? (vals @state/cars-location-ahead))
+;                                       (< 2 (count (filter #(identical? true %)
+;                                                           (map #(.contains (:car car) %) (vals @state/cars-location-ahead))))))
+
+
+(defn may-move? [car lights-state sensor-list dangerous-cars future-position]
   (not  (some #(= false %) (map
-                              #(let [light-index %
+                            (fn [x] (let [light-index x
                                      light-state (nth lights-state light-index)
                                      sensor (:point (sensor-list light-index))]
-                                 (not (and
-                                       ;the traffic light allows us to move (green/orange => 1, 2)
-                                       (== light-state 0)
-                                       ;we are not standing infront of the traffic light (by checking .contains of its sensor)
-                                       (.contains (:car car) (.-position sensor)))))
+                                 (not
+                                  (or
+
+                                  ;collision check
+                                   (when-not (or (empty? dangerous-cars) (nil? future-position))
+                                     (<= 1 (count (filter (fn [x] (> 5 (.-length (.subtract future-position x)))) dangerous-cars))))
+
+                                    ; (print "asdasd"))
+                                       ;(< 2 (count (filter #(.contains (:car car) %) dangerous-cars)))))
+                                   (and
+                                    ;the traffic light allows us to move (green/orange => 1, 2)
+                                    (== light-state 0)
+                                    ;we are not standing infront of the traffic light (by checking .contains of its sensor)
+                                    (.contains (:car car) (.-position sensor)))))))
 
                               (-> car :road :light)))))
 
 
+(defn find-dangerous-cars [current-car cars]
+  (when (<= 2 (count cars))
+     (filter #(> 100 (.-length (.subtract  (.-position (:car current-car))  %))) cars)))
+
 
 (defn car-ai [ch car x]
-  (go-loop [x 0]
-           (let [data (<! ch)
-                 path (:path (:road car))
-                 sensors (:sensors @state/state)]
-             (cond
-              ;end of life?
-              (>= x (.-length path))
-              (destroy-car! ch car)
+  (let [id (rand-int 99999)
+        perf-rate 2]
+    (go-loop [x 0
+              tick 15
+              dangerous-cars []]
+             (let [data (<! ch)
+                   path (:path (:road car))
+                   sensors (:sensors @state/state)
+                   x-add (* (:speed car) (:speed @state/ui-state))]
+               (cond
+                ;end of life?
+                (>= x (.-length path))
+                (destroy-car! ch car id)
 
-              ;are we allowed to move? traffic light? car infront? intersecting car nearby?
-              (may-move? car @state/lights sensors)
-              (do
-                (set! (.-position (:car car)) (.getPointAt path x))
-                (trigger-sensors! car sensors)
-                (recur (+ x (* (:speed car) (:speed @state/ui-state)))))
+                ;update dangerous cars, for perf reasons we can't check every car for collision
+                (== 0 (mod tick perf-rate))
+                (recur x (inc tick) (find-dangerous-cars car (vals @state/cars-location-ahead)))
 
-              :default
-              (do
-                (trigger-sensors! car sensors)
-                (recur x))
-              ))))
+                ;are we allowed to move? traffic light? car infront? intersecting car nearby?
+                (may-move? car @state/lights sensors dangerous-cars (.getPointAt path (+ 12 x)))
+                (do
+                  (set! (.-position (:car car)) (.getPointAt path x))
+                  (trigger-sensors! car sensors)
+                  (swap! state/cars-location-ahead assoc id  (.getPointAt path x))
+                  (recur (+ x x-add) (inc tick) dangerous-cars))
+
+                :default
+                (do
+                  (trigger-sensors! car sensors)
+                  (swap! state/cars-location-ahead assoc id  (.getPointAt path  x))
+                  (recur x (inc tick) dangerous-cars))
+                )))))
 
 
 
