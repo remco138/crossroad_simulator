@@ -364,7 +364,9 @@ impl<'a> Crossroad<'a> {
         self.directions
             .get(&control.direction())
             .and_then(|xor| xor.get_conflicts_for(control))
-            .expect("the world is ending conflicts_for")
+            //.expect("the world is ending conflicts_for")
+            .unwrap_or(vec![])
+
     }
 
     pub fn get_traffic_control_unsafe(&'a self, id: usize) -> &'a Control {
