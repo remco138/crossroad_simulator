@@ -10,6 +10,12 @@
 
 ;display the lines (by setting strokeColor)
 (defn init! []
+
+  (set! (.-onLoad state/raster) (fn [] (this-as this (do
+                                                 (set! this.position js/paper.view.center)
+                                                 (set! this.bounds.height js/paper.view.bounds.height)
+                                                 (set! this.bounds.width js/paper.view.bounds.width) ))))
+
   (doseq [p (:roads @state/state)]
     (-> p val :path
         (-> (.-strokeColor) (set! "black") )))
@@ -23,14 +29,19 @@
     (-> p val :path
         (-> (.-strokeColor) (set! "orange") )))
 
-
   (doseq [p (:traffic-lights @state/state)]
     (-> p val :point
         (-> (.-fillColor) (set! "orange") )))
 
   (doseq [p (:sensors @state/state)]
     (-> p val :point
-        (-> (.-fillColor) (set! "teal")))))
+        (-> (.-fillColor) (set! "teal"))))
+
+
+    (doseq [p (:sensors @state/state)]
+      (-> p val :point
+          (-> (.-opacity) (set! 0)))))
+
 
 (defn state->color [code]
   (case code
@@ -46,4 +57,37 @@
 
   (doseq [[k v] (:traffic-lights @state/state)]
     (-> v :point
-        (-> (.-fillColor) (set! (state->color (@state/lights k)))))))
+        (-> (.-fillColor) (set! (state->color (@state/lights k))))))
+
+  (if (:display-sensors @state/ui-state)
+    (doseq [p (:sensors @state/state)]
+      (-> p val :point
+          (-> (.-opacity) (set! 1))))
+    (doseq [p (:sensors @state/state)]
+      (-> p val :point
+          (-> (.-opacity) (set! 0)))))
+
+  (let [grab-roads-fn (juxt :roads :bus-roads :cycling-roads :pedestrian-roads)
+        paths (->> (grab-roads-fn @state/state) (mapcat vals) (map :path))]
+
+    (if (:display-paths @state/ui-state)
+      (doseq [x paths]
+        (-> x (.-opacity) (set! 1)))
+
+      (doseq [x paths]
+        (-> x (.-opacity) (set! 0)))))
+
+  (comment (if (:display-paths @state/ui-state)
+            (doseq [p (vals (:sensors @state/state))
+                    r (vals p)]
+              (-> r val :path
+                  (-> (.-opacity) (set! 1))))
+            (doseq [p (:sensors @state/state)
+                    r (vals p)]
+              (-> r val :path
+                  (-> (.-opacity) (set! 0))))))
+
+    (doseq [[k v] (:traffic-lights @state/state)]
+       (-> v :point
+           (-> (.-fillColor) (set! (state->color (@state/lights k))))))
+  )

@@ -8,6 +8,7 @@
 ;example state
 ; "road1" {:path (js/paper.Path. "M 0.65134816,139.3758 C 212.96155,173.64748 449.60053,223.39674 454.35934,176.35395 461.74642,103.32967 481.01948,3.7561552 481.01948,3.7561552") :light 1}
 (defn init! []
+   (def raster (js/paper.Raster. "plattegrond2.jpg"))
   (def state (atom {:roads {
                             ;"road0-0"  {:path (js/paper.Path. "m 0,218.74405 310.10976,53.39638 c 0,0 13.96521,0 18.89411,-16.01891 C 334.00915,239.85438 370.8995,1.0511003 370.8995,1.0511003")                         :light [0]}
                             "road0-1"  {:path (js/paper.Path. "m 0,218.74405 318.32459,55.45009 c 0,0 34.17334,7.08454 49.69972,71.05826 11.50091,47.38749 -1.23222,69.00457 -2.46445,112.95389")                         :light nil}
@@ -87,10 +88,11 @@
   (comment (def sensors-chan (atom (async/merge (map #(-> % val :chan) (:sensors @state)))))))
 
 
-(def ui-state (r/atom {:speed 3 :sensor-refresh 1000 :last-packed "last-packet" :connect-ip "127.0.0.1" :connect-port 9990}))
+(def ui-state (r/atom {:speed 3 :sensor-refresh 300 :last-packed "last-packet" :connect-ip "127.0.0.1" :connect-port 9990 :display-sensors false :display-paths false}))
 
 (def cars (atom []))
-(def lights (atom [0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 0 0 0 0 1]))
+(def lights (atom [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 2 1 1 1 1 1 0 1 0 0 0 0 0 1]))
+(def cars-location-ahead (atom {}))
 
 (defn reset-light-states! [ls]
   (reset! lights (reduce #(assoc %1 (.-id %2) (.-status %2)) @lights ls)))

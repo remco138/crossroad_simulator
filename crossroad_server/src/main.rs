@@ -111,7 +111,7 @@ fn spawn_main_loop( out_tx: Sender<String>,
         let mut tlights_builder = TrafficLightsBuilder::new(34)
              .set_direction(Direction::North, vec![ 1,6,11,22,24,25,31,33 ])
              .set_direction(Direction::East,  vec![ 2,3,7,12,15,19,28,30 ])
-             .set_direction(Direction::South, vec![ 4,8,13,17,18,21,23,26,32,34 ])
+             .set_direction(Direction::South, vec![ 0,4,8,13,17,18,21,23,26,32,34 ])
              .set_direction(Direction::West,  vec![ 5,9,10,14,16,20,27,29 ])
              .set_type(Type::Primary, vec![ 2,3,4,   9,10,11 ])
              .set_type_range(Type::Rest, 17, 34);
@@ -119,10 +119,13 @@ fn spawn_main_loop( out_tx: Sender<String>,
         let mut traffic_controls = ControlsBuilder::new(&tlights_builder)
              .add_group(vec![ 2, 3], Direction::East, Type::Primary)
              .add_group(vec![ 9,10], Direction::West, Type::Primary)
+
              .add_group(vec![17,23, 25],     Direction::West,  Type::Rest)
              .add_group(vec![24,26],         Direction::West,  Type::Rest)
+
              .add_group(vec![19,20, 28,29],  Direction::South, Type::Rest)
              .add_group(vec![27,30],         Direction::South, Type::Rest)
+
              .add_group(vec![21,22, 31,34],  Direction::East,  Type::Rest)
              .add_group(vec![32,33],         Direction::East,  Type::Rest)
              .create_controls();
