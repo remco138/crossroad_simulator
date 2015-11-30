@@ -19,27 +19,29 @@
 ;             :road2 {:path (js/paper.Path. "M -4.9288972,162.88321 697.30508,278.85324 965.99691,293.64823")}})
 (defn random-car [roads]
   (let [road (pick-random-road roads)
-        car (js/paper.Path.Circle. (.getPointAt (:path road) 0) 7)]
+        car (js/paper.Path.Circle. (.getPointAt (:path road) 0) 5)]
     (set! (.-strokeColor car) "black")
-    {:car car :road road :speed 1}))
+    (set! (.-fillColor car) "black")
+    {:car car :road road :speed 1 :ahead 14 :dist 6}))
 
 (defn random-walker [roads]
   (let [road (pick-random-road roads)
         car (js/paper.Path.Circle. (.getPointAt (:path road) 0) 7)]
     (set! (.-strokeColor car) "black")
-    {:car car :road road :speed 0.1}))
+    {:car car :road road :speed 0.1 :ahead 2 :dist 5}))
 
 (defn random-cyclist [roads]
   (let [road (pick-random-road roads)
         car (js/paper.Path.Circle. (.getPointAt (:path road) 0) 2)]
-    (set! (.-strokeColor car) "black")
-    {:car car :road road :speed 0.3}))
+    (set! (.-strokeColor car) "green")
+    (set! (.-fillColor car) "green")
+    {:car car :road road :speed 0.3 :ahead 4 :dist 2}))
 
 (defn random-bus [roads]
   (let [road (pick-random-road roads)
         car (js/paper.Path.Rectangle. (.getPointAt (:path road) 0) 17)]
     (set! (.-strokeColor car) "black")
-    {:car car :road road :speed 0.7}))
+    {:car car :road road :speed 0.7 :ahead 18 :dist 5}))
 
 ;----------
 ;Car AI
@@ -76,7 +78,7 @@
 
                                   ;collision check
                                    (when-not (or (empty? dangerous-cars) (nil? future-position))
-                                     (<= 1 (count (filter (fn [x] (> 5 (.-length (.subtract future-position x)))) dangerous-cars))))
+                                     (<= 1 (count (filter (fn [x] (> (:dist car) (.-length (.subtract future-position x)))) dangerous-cars))))
 
                                    (and
                                     ;the traffic light allows us to move (green/orange => 1, 2)
@@ -102,7 +104,7 @@
                    path (:path (:road car))
                    sensors (:sensors @state/state)
                    x-add (* (:speed car) (:speed @state/ui-state))
-                   may-move (may-move? car @state/lights sensors dangerous-cars (.getPointAt path (+ 12 x)))]
+                   may-move (may-move? car @state/lights sensors dangerous-cars (.getPointAt path (+ x (:ahead car))))]
                (cond
                 ;end of life?
                 (>= x (.-length path))
@@ -115,6 +117,7 @@
                 ;are we allowed to move? traffic light? car infront? intersecting car nearby?
                 may-move
                 (do
+
                   (set! (.-position (:car car)) (.getPointAt path x))
                   (trigger-sensors! car sensors)
                   (swap! state/cars-location-ahead assoc id  (.getPointAt path x))
@@ -124,5 +127,5 @@
                 (do
                   (trigger-sensors! car sensors)
                   (swap! state/cars-location-ahead assoc id  (.getPointAt path  x))
-                  (recur x tick dangerous-cars))
+                  (recur x (inc tick) dangerous-cars))
                 )))))

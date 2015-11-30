@@ -23,14 +23,19 @@
     (-> p val :path
         (-> (.-strokeColor) (set! "orange") )))
 
-
   (doseq [p (:traffic-lights @state/state)]
     (-> p val :point
         (-> (.-fillColor) (set! "orange") )))
 
   (doseq [p (:sensors @state/state)]
     (-> p val :point
-        (-> (.-fillColor) (set! "teal")))))
+        (-> (.-fillColor) (set! "teal"))))
+
+
+    (doseq [p (:sensors @state/state)]
+      (-> p val :point
+          (-> (.-opacity) (set! 0)))))
+
 
 (defn state->color [code]
   (case code
@@ -46,4 +51,18 @@
 
   (doseq [[k v] (:traffic-lights @state/state)]
     (-> v :point
-        (-> (.-fillColor) (set! (state->color (@state/lights k)))))))
+        (-> (.-fillColor) (set! (state->color (@state/lights k))))))
+
+  (if (:display-sensors @state/ui-state)
+    (doseq [p (:sensors @state/state)]
+      (-> p val :point
+          (-> (.-opacity) (set! 1))))
+    (doseq [p (:sensors @state/state)]
+      (-> p val :point
+          (-> (.-opacity) (set! 0)))))
+
+
+    (doseq [[k v] (:traffic-lights @state/state)]
+       (-> v :point
+           (-> (.-fillColor) (set! (state->color (@state/lights k))))))
+  )

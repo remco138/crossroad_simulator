@@ -60,6 +60,12 @@
    [:button {:on-click #(network/connect! (@state/ui-state :connect-ip) (@state/ui-state :connect-port))}
     "connect!"]
 
+   [:input {:type "checkbox"
+            :checked (:display-sensors @state/ui-state)
+            :name "displaySensors"
+            :on-change (fn [x]
+                         (swap! state/ui-state assoc :display-sensors (-> x .-target .-checked)))}]
+
    [:br]
    [:span "car spee multiplier "]
    [:input {:type "range"
