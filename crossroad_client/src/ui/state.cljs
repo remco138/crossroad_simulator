@@ -36,9 +36,11 @@
                                 "road16-2" {:path (js/paper.Path. "M 801.76724,199.84994 498.64008,153.43616 c 0,0 -67.77234,-20.94781 -90.77386,115.82908 -20.86699,124.08405 -28.34115,188.94105 -28.34115,188.94105")      :light [16]}
                                 }
                     :cycling-roads {
-                                    "road17" {:path (js/paper.Path. "m 0,218.74405 310.10976,53.39638 c 0,0 13.96521,0 18.89411,-16.01891 C 334.00915,239.85438 370.8995,1.0511003 370.8995,1.0511003")                         :light [25 24]}
+                                    "road17" {:path (js/paper.Path. "M -0.00172916,219.29373 305.76164,268.08592 c 0,0 22.64913,4.066 23.84119,-15.6832 1.08971,-18.0536 36.63075,-211.232644 43.22438,-243.8723788 0.61929,-3.0655739 3.86198,-2.4119816 3.86198,-2.4119816") :light [25]  }
                                     }
-                    :pedestrian-roads {}
+                    :pedestrian-roads {
+                                    "road18" {:path (js/paper.Path. "m 367.11368,6.1145703 c 0,0 -44.72746,226.5416697 -45.88921,246.2914597 -1.16175,19.74978 -21.18133,11.57624 -21.18133,11.57624 L 2.0537071,215.18868")                         :light [25 24]}
+                                       }
                     :traffic-lights {
                                      ;0  {:point (js/paper.Path.Circle. (js/paper.Point.  329.64716  253.27734          ) 4)}
                                      1  {:point (js/paper.Path.Circle. (js/paper.Point.  372.54248  194.71568          ) 4)}
@@ -57,35 +59,42 @@
                                      14 {:point (js/paper.Path.Circle. (js/paper.Point.  406.83936  123.86277          ) 4)}
                                      15 {:point (js/paper.Path.Circle. (js/paper.Point.  362.90231  249.06598          ) 4)}
 
+                                     17 {:point (js/paper.Path.Circle. (js/paper.Point.  348.00064    143.06494        ) 4) }
+
+                                     23 {:point (js/paper.Path.Circle. (js/paper.Point.  341.22342    141.83272        ) 4) }
 
                                      25  {:point (js/paper.Path.Circle. (js/paper.Point.  329.64716  253.27734          ) 4)}
                                      24  {:point (js/paper.Path.Circle. (js/paper.Point.  344.16501  168.22285          ) 4)}
+
+                                     26  {:point (js/paper.Path.Circle. (js/paper.Point.  332.28979  186.0901          ) 4)}
                                      }
 ;0 {:point (js/paper.Path.Circle. (js/paper.Point. 0 0) 4) :chan (chan (dropping-buffer 1))}
                     :sensors {
                               ;0  {:point (js/paper.Path.Circle. (js/paper.Point.  326.78836    261.55911        ) 4) :chan (chan (dropping-buffer 1))}
-                              1  {:point (js/paper.Path.Circle. (js/paper.Point.  296.34995    187.11697        ) 4) :chan (chan (dropping-buffer 1))}
-                              2  {:point (js/paper.Path.Circle. (js/paper.Point.  294.29623    199.64458        ) 4) :chan (chan (dropping-buffer 1))}
-                              3  {:point (js/paper.Path.Circle. (js/paper.Point.  292.85864    209.50237        ) 4) :chan (chan (dropping-buffer 1))}
-                              4  {:point (js/paper.Path.Circle. (js/paper.Point.  290.80493    224.49443        ) 4) :chan (chan (dropping-buffer 1))}
-                              5  {:point (js/paper.Path.Circle. (js/paper.Point.  417.64990    323.27292        ) 4) :chan (chan (dropping-buffer 1))}
-                              6  {:point (js/paper.Path.Circle. (js/paper.Point.  430.86774    325.12607        ) 4) :chan (chan (dropping-buffer 1))}
-                              7  {:point (js/paper.Path.Circle. (js/paper.Point.  441.75626    326.75818        ) 4) :chan (chan (dropping-buffer 1))}
-                              8  {:point (js/paper.Path.Circle. (js/paper.Point.  545.45721    211.53934        ) 4) :chan (chan (dropping-buffer 1))}
-                              9  {:point (js/paper.Path.Circle. (js/paper.Point.  547.47571    197.51324        ) 4) :chan (chan (dropping-buffer 1))}
-                              10 {:point (js/paper.Path.Circle. (js/paper.Point.  549.09802    185.60529        ) 4) :chan (chan (dropping-buffer 1))}
-                              11 {:point (js/paper.Path.Circle. (js/paper.Point.  550.67340    172.06790        ) 4) :chan (chan (dropping-buffer 1))}
-                              16 {:point (js/paper.Path.Circle. (js/paper.Point.  551.83112    162.88322        ) 4) :chan (chan (dropping-buffer 1))}
-                              12 {:point (js/paper.Path.Circle. (js/paper.Point.  432.92145    117.08555        ) 4) :chan (chan (dropping-buffer 1))}
-                              13 {:point (js/paper.Path.Circle. (js/paper.Point.  421.21533    115.44258        ) 4) :chan (chan (dropping-buffer 1))}
-                              14 {:point (js/paper.Path.Circle. (js/paper.Point.  410.33066    113.59425        ) 4) :chan (chan (dropping-buffer 1))}
-                              15 {:point (js/paper.Path.Circle. (js/paper.Point.  290.18881    237.12473        ) 4) :chan (chan (dropping-buffer 1))}
+                              1  {:point (js/paper.Path.Circle. (js/paper.Point.  296.34995    187.11697        ) 8) :chan (chan (dropping-buffer 4))}
+                              2  {:point (js/paper.Path.Circle. (js/paper.Point.  294.29623    199.64458        ) 8) :chan (chan (dropping-buffer 4))}
+                              3  {:point (js/paper.Path.Circle. (js/paper.Point.  292.85864    209.50237        ) 8) :chan (chan (dropping-buffer 4))}
+                              4  {:point (js/paper.Path.Circle. (js/paper.Point.  290.80493    224.49443        ) 8) :chan (chan (dropping-buffer 4))}
+                              5  {:point (js/paper.Path.Circle. (js/paper.Point.  417.64990    323.27292        ) 8) :chan (chan (dropping-buffer 4))}
+                              6  {:point (js/paper.Path.Circle. (js/paper.Point.  430.86774    325.12607        ) 8) :chan (chan (dropping-buffer 4))}
+                              7  {:point (js/paper.Path.Circle. (js/paper.Point.  441.75626    326.75818        ) 8) :chan (chan (dropping-buffer 4))}
+                              8  {:point (js/paper.Path.Circle. (js/paper.Point.  545.45721    211.53934        ) 8) :chan (chan (dropping-buffer 4))}
+                              9  {:point (js/paper.Path.Circle. (js/paper.Point.  547.47571    197.51324        ) 8) :chan (chan (dropping-buffer 4))}
+                              10 {:point (js/paper.Path.Circle. (js/paper.Point.  549.09802    185.60529        ) 8) :chan (chan (dropping-buffer 4))}
+                              11 {:point (js/paper.Path.Circle. (js/paper.Point.  550.67340    172.06790        ) 8) :chan (chan (dropping-buffer 4))}
+                              16 {:point (js/paper.Path.Circle. (js/paper.Point.  551.83112    162.88322        ) 8) :chan (chan (dropping-buffer 4))}
+                              12 {:point (js/paper.Path.Circle. (js/paper.Point.  432.92145    117.08555        ) 8) :chan (chan (dropping-buffer 4))}
+                              13 {:point (js/paper.Path.Circle. (js/paper.Point.  421.21533    115.44258        ) 8) :chan (chan (dropping-buffer 4))}
+                              14 {:point (js/paper.Path.Circle. (js/paper.Point.  410.33066    113.59425        ) 8) :chan (chan (dropping-buffer 4))}
+                              15 {:point (js/paper.Path.Circle. (js/paper.Point.  290.18881    237.12473        ) 8) :chan (chan (dropping-buffer 4))}
 
-                              25 {:point (js/paper.Path.Circle. (js/paper.Point.  326.78836    261.55911        ) 4) :chan (chan (dropping-buffer 1))}
-                              24 {:point (js/paper.Path.Circle. (js/paper.Point.  344.16501    171.71416        ) 4) :chan (chan (dropping-buffer 1))}
-                              }}))
+                              17 {:point (js/paper.Path.Circle. (js/paper.Point.  348.00064    143.06494        ) 8) :chan (chan (dropping-buffer 4))}
 
-  (comment (def sensors-chan (atom (async/merge (map #(-> % val :chan) (:sensors @state)))))))
+                              25 {:point (js/paper.Path.Circle. (js/paper.Point.  326.78836    261.55911        ) 8) :chan (chan (dropping-buffer 4))}
+                              24 {:point (js/paper.Path.Circle. (js/paper.Point.  344.16501    171.71416        ) 8) :chan (chan (dropping-buffer 4))}
+
+                              26 {:point (js/paper.Path.Circle. (js/paper.Point.  332.28979    186.0901        ) 8) :chan (chan (dropping-buffer 4))}}})))
+
 
 
 (def ui-state (r/atom {:speed 3 :sensor-refresh 300 :last-packed "last-packet" :connect-ip "127.0.0.1" :connect-port 9990 :display-sensors false :display-paths false}))
