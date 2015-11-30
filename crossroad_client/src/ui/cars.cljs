@@ -84,7 +84,7 @@
                                     ;the traffic light allows us to move (green/orange => 1, 2)
                                     (== light-state 0)
                                     ;we are not standing infront of the traffic light (by checking .contains of its sensor)
-                                    (.contains (:car car) (.-position sensor)))))))
+                                    (.contains  sensor (-> car :car .-position)))))))
 
                               (-> car :road :light)))))
 
