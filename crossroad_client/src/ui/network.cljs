@@ -29,8 +29,8 @@
 
 
 (defn send-sensor-states! [xs]
-  (send! (str (clj->json {:stoplichten xs
-                          }) "\n")))
+  (send! (str (clj->json {:banen xs})
+              "\n")))
 
 (defn on-connect []
   (print "we might have connected to the server and sent our greetings!"))
