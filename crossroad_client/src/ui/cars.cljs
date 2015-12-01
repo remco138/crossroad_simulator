@@ -22,7 +22,7 @@
         car (js/paper.Path.Circle. (.getPointAt (:path road) 0) 5)]
     (set! (.-strokeColor car) "black")
     (set! (.-fillColor car) "black")
-    {:car car :road road :speed 1 :ahead 14 :dist 6}))
+    {:car car :road road :speed 1 :ahead 14 :dist 6 :collision true}))
 
 (defn random-walker [roads]
   (let [road (pick-random-road roads)
@@ -60,7 +60,7 @@
     (let [indexes (-> car :road :light)
              sensors (map sensor-list indexes)
           state (map #(> 10 (.-length (.subtract (.-position (:point %)) (.-position (:car car))  ))) sensors)]
-         (go (>! (:chan (first sensors)) {:bezet (first state) :id (first indexes)})))))
+      (doall (map (fn [x y z] (go (>! (:chan x) {:bezet y :id z}))) sensors state indexes)))))
 
 
 
@@ -127,7 +127,7 @@
                 :default
                 (do
                   ;prevent buffer from getting stuck....
-                  (when  (== 1 (mod tick 15)) (trigger-sensors! car sensors))
+                  (when  (== 1 (mod tick 7)) (trigger-sensors! car sensors))
                   (swap! state/cars-location-ahead assoc id  (.getPointAt path  x))
                   (recur x (inc tick) dangerous-cars))
                 )))))
