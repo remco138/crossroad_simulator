@@ -6,8 +6,9 @@ authors = ["Rutger Schoorstra <schoorstra_rutger@hotmail.com>"]
 [dependencies]
 serde = "0.6.0"
 serde_json = "0.6.0"
-serde_macros = "*"
-schedule_recv = "*"
-time = "*"
+serde_macros = "0.5.3"
+schedule_recv = "0.0.1"
+time = "0.1.32"
 itertools = "0.4.1"
-permutohedron = "*"
+permutohedron = "0.1.7"
+clap = "1.5.3"
