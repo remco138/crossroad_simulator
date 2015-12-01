@@ -21,14 +21,14 @@ pub fn create_traffic_controls(traffic_lights: &TrafficLightsBuilder) -> Vec<Con
          .add_group(vec![ 2, 3], Direction::East, Type::Primary)
          .add_group(vec![ 9,10], Direction::West, Type::Primary)
 
-         .add_group(vec![17,23, 25],     Direction::West,  Type::Rest)
-         .add_group(vec![24,26],         Direction::West,  Type::Rest)
+         .add_group(vec![17,23, 25,     24,26],  Direction::West,  Type::Rest)
+         //.add_group(vec![24,26],         Direction::West,  Type::Rest)
 
-         .add_group(vec![19,20, 28,29],  Direction::South, Type::Rest)
-         .add_group(vec![27,30],         Direction::South, Type::Rest)
+         .add_group(vec![19,20, 28,29,  27,30],  Direction::South, Type::Rest)
+        // .add_group(vec![27,30],         Direction::South, Type::Rest)
 
-         .add_group(vec![21,22, 31,34],  Direction::East,  Type::Rest)
-         .add_group(vec![32,33],         Direction::East,  Type::Rest)
+         .add_group(vec![21,22, 31,34,  32,33],  Direction::East,  Type::Rest)
+        // .add_group(vec![32,33],         Direction::East,  Type::Rest)
          .create_controls()
 }
 
@@ -39,11 +39,11 @@ pub fn create_crossroad<'a>(traffic_controls: &'a Vec<Control<'a>>) -> Crossroad
     let road_east_2_3                 = indexed_controls[ 2];
     let road_west_9_10                = indexed_controls[ 9];
     let west_bicycle_and_pedestrain   = indexed_controls[17];
-    let west_inner                    = indexed_controls[24];
+    //let west_inner                    = indexed_controls[24];
     let south_bicycle_and_pedestrain  = indexed_controls[19];
-    let south_inner                   = indexed_controls[27];
+    //let south_inner                   = indexed_controls[27];
     let east_bicycle_and_pedestrain   = indexed_controls[21];
-    let east_inner                    = indexed_controls[32];
+    //let east_inner                    = indexed_controls[32];
 
     let mut directions = HashMap::new();
     directions.insert(Direction::North,
@@ -131,8 +131,10 @@ pub fn create_crossroad<'a>(traffic_controls: &'a Vec<Control<'a>>) -> Crossroad
     );
 
     let primary_traffic = vec![
-        road_east_2_3,  &indexed_controls[4],
-        road_west_9_10, &indexed_controls[11],
+        road_east_2_3,
+        &indexed_controls[4],
+        road_west_9_10,
+        &indexed_controls[11],
     ];
 
     Crossroad {
@@ -154,9 +156,6 @@ pub fn create_crossroad<'a>(traffic_controls: &'a Vec<Control<'a>>) -> Crossroad
             &west_bicycle_and_pedestrain,
         ],
         priority_traffic: vec![
-            &east_inner,
-            &south_inner,
-            &west_inner,
             &indexed_controls[15],
             &indexed_controls[16],
         ],
