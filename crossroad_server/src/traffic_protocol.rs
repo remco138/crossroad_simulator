@@ -17,11 +17,24 @@ pub const BAAN_COUNT: usize = 35; //TODO: REMOVE
 // Client State
 // -------------------------------------------------------------------------------
 
+#[derive(Debug, Copy, Clone)]
+pub struct Sensor {
+    pub id: usize,
+    pub bezet: bool,
+    pub last_update: time::Tm,
+}
+
+impl Sensor {
+    fn new() -> Sensor { Sensor { id: 0, bezet: false, last_update: time::empty_tm() } }
+}
+
+
 pub struct SensorStates {
-    sensors: [Sensor; BAAN_COUNT], //TODO: use Vec
+    sensors: [Sensor; BAAN_COUNT],
 }
 
 impl SensorStates {
+
     pub fn new() -> SensorStates {
         let mut inst = SensorStates { sensors: [Sensor::new(); BAAN_COUNT] };
         for i in 0..BAAN_COUNT {  inst.sensors[i].id = i; }
@@ -46,19 +59,14 @@ impl SensorStates {
         }
     }
 
-    pub fn update(&mut self, banen_json: BanenJson) -> BanenJson {
-        for sensor in banen_json.banen.iter() {
-            self.sensors[sensor.id].bezet = sensor.bezet;
+    pub fn update(&mut self, banen: &Vec<Baan>) {
+        for baan in banen.iter() {
+            self.sensors[baan.id].bezet = baan.bezet;
 
-            if sensor.bezet {
-                self.sensors[sensor.id].last_update = time::now();
+            if baan.bezet {
+                self.sensors[baan.id].last_update = time::now();
             }
         }
-        banen_json
-    }
-
-    pub fn update_from_json(&mut self, json_str: &str) -> Result<BanenJson>  {
-        json_from_str(&json_str).map(|banen_json| self.update(banen_json))
     }
 
     pub fn active_sensors(&self) -> Vec<&Sensor> {
@@ -89,32 +97,78 @@ impl fmt::Debug for SensorStates {
 
 
 // -------------------------------------------------------------------------------
+// Protocol: All in 1 Json
+// -------------------------------------------------------------------------------
+
+pub static mut json_compat_level: JsonCompatLevel = JsonCompatLevel::None; //plsnostatic :|
+
+pub enum JsonCompatLevel {
+    None, Null, Empty,
+}
+
+impl JsonCompatLevel {
+    pub fn from_str(s: &str) -> Option<JsonCompatLevel> {
+        match s {
+            "none"  => Some(JsonCompatLevel::None),
+            "null"  => Some(JsonCompatLevel::Null),
+            "empty" => Some(JsonCompatLevel::Empty),
+            _       => None,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ProtocolJson {
+    pub banen: Option<Vec<Baan>>,
+    pub busbanen: Option<Vec<BusBaan>>,
+    pub stoplichten: Option<Vec<StoplichtJson>>,
+}
+
+impl ProtocolJson {
+    pub fn vec_is_null(c: ClientJson) -> ProtocolJson {
+        ProtocolJson {
+            banen: None,
+            busbanen: None,
+            stoplichten: Some(c.stoplichten),
+        }
+    }
+    pub fn vec_is_empty(c: ClientJson) -> ProtocolJson {
+        ProtocolJson {
+            banen: Some(vec![]),
+            busbanen: Some(vec![]),
+            stoplichten: Some(c.stoplichten),
+        }
+    }
+}
+
+pub fn out_compat_json_str(stoplichten: Vec<StoplichtJson>) -> String {
+    let json_obj = ClientJson::new(stoplichten);
+
+    unsafe {
+        match json_compat_level {
+            JsonCompatLevel::None  => serde_json::to_string(&json_obj),
+            JsonCompatLevel::Null  => serde_json::to_string(&ProtocolJson::vec_is_null(json_obj)),
+            JsonCompatLevel::Empty => serde_json::to_string(&ProtocolJson::vec_is_empty(json_obj)),
+        }.unwrap()
+    }
+}
+
+// -------------------------------------------------------------------------------
 // Protocol: Client -> Server
 // -------------------------------------------------------------------------------
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct BanenJson {
-    pub banen: Vec<BaanSensorJson>
+    pub banen: Vec<Baan>
 }
 
-#[derive(Deserialize, Debug, Copy, Clone)]
-pub struct BaanSensorJson {
+#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+pub struct Baan {
     pub id: usize,
     pub bezet: bool,
 }
 
-#[derive(Debug, Copy, Clone)]
-pub struct Sensor {
-    pub id: usize,
-    pub bezet: bool,
-    pub last_update: time::Tm,
-}
-
-impl Sensor {
-    fn new() -> Sensor { Sensor { id: 0, bezet: false, last_update: time::empty_tm() } }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BusBaan {
     pub id: usize,
     pub eerstvolgendelijn: i32,
@@ -148,11 +202,8 @@ pub struct ClientJson {
 }
 
 impl ClientJson {
-    pub fn from(banen: Vec<StoplichtJson>) -> ClientJson {
-        ClientJson { stoplichten: banen }
-    }
-    pub fn serialize(&self) -> serde_json::error::Result<String> {
-        serde_json::to_string(self)
+    pub fn new(stoplichten: Vec<StoplichtJson>) -> ClientJson {
+        ClientJson { stoplichten: stoplichten }
     }
 }
 
@@ -166,21 +217,4 @@ impl StoplichtJson {
     pub fn empty() -> StoplichtJson {
         StoplichtJson { id: 0, status: JsonState::Rood.id() }
     }
-}
-
-// -------------------------------------------------------------------------------
-// Json
-// -------------------------------------------------------------------------------
-/*
-TODO: REMOVE
-pub fn send_json(out_tx: &Sender<String>, obj: StoplichtJson) -> serde_json::error::Result<String>  {
-    serde_json::to_string(obj).and_then(|json_str| {
-        out_tx.send(json_str).unwrap() // TODO: remove unwraps!
-    });
-}*/
-
-pub fn json_from_str<T>(s: &str) -> Result<T> where T: de::Deserialize {
-    serde_json::from_str(&s).map_err(|serd_err| {
-        Error::SerdeJson(JsonError::new(&s,  serd_err))
-    })
 }

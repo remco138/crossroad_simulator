@@ -1,6 +1,8 @@
 #![allow(dead_code, unused_variables, unused_imports, unused_must_use,)]
 #![feature(ip_addr)]
 
+#[macro_use]
+extern crate clap;
 extern crate time;
 extern crate serde;
 extern crate serde_json;
@@ -27,11 +29,37 @@ use std::collections::HashMap;
 use crossroad_server::crossroad::*;
 use crossroad_server::traffic_protocol::*;
 use crossroad_server::traffic_controls::*;
+use crossroad_server::default_crossroad;
 use crossroad_server::error::{Result, Error, JsonError};
 
 
 fn main() {
-    run_server("127.0.0.1:9990").unwrap();
+    let matches = clap_app!(myapp =>
+        (version: "1.0")
+        (author: "Rutger S.")
+        (about: "Awesome crossroad simulator!")
+        (@arg ip: +required "Runs the server on this ip")
+        (@arg port: -p --port +takes_value "Sets the port")
+        (@arg json: -j --json +takes_value "Determines how the json output is encoded. Takes none, null or empty as the value.
+            none:  Sends only the {banan} json vec.
+            null:  Sends the complete {banen, busbanen, stoplichten} json, where the empty ones will be null.
+            empty: Sends the complete {banen, busbanen, stoplichten} json, where the empty ones will be []\n")
+    ).get_matches();
+
+    let j_str = matches.value_of("json").unwrap_or("none");
+    match JsonCompatLevel::from_str(&j_str) {
+        Some(compat_level) => unsafe {
+            crossroad_server::traffic_protocol::json_compat_level = compat_level;
+        },
+        None => println!("Incorrect -j value!"),
+    }
+
+    let ip = matches.value_of("ip").unwrap();
+    let port = matches.value_of("PORT").unwrap_or("9990");
+    let address = format!("{}:{}", ip, port);
+
+    println!("\nJson compatibility level = {:?} ", j_str);
+    run_server(&*address).unwrap();
 }
 
 fn run_server<A>(address: A) -> io::Result<()> where A: ToSocketAddrs + Display {
@@ -108,40 +136,19 @@ fn spawn_main_loop( out_tx: Sender<String>,
  {
     thread::spawn(move || {
 
-        let mut tlights_builder = TrafficLightsBuilder::new(34)
-             .set_direction(Direction::North, vec![ 1,6,11,22,24,25,31,33 ])
-             .set_direction(Direction::East,  vec![ 2,3,7,12,15,19,28,30 ])
-             .set_direction(Direction::South, vec![ 0,4,8,13,17,18,21,23,26,32,34 ])
-             .set_direction(Direction::West,  vec![ 5,9,10,14,16,20,27,29 ])
-             .set_type(Type::Primary, vec![ 2,3,4,   9,10,11 ])
-             .set_type_range(Type::Rest, 17, 34);
+        let traffic_lights = default_crossroad::create_traffic_lights();
+        let traffic_controls = default_crossroad::create_traffic_controls(&traffic_lights);
+        let crossroad = default_crossroad::create_crossroad(&traffic_controls);
 
-        let mut traffic_controls = ControlsBuilder::new(&tlights_builder)
-             .add_group(vec![ 2, 3], Direction::East, Type::Primary)
-             .add_group(vec![ 9,10], Direction::West, Type::Primary)
-
-             .add_group(vec![17,23, 25],     Direction::West,  Type::Rest)
-             .add_group(vec![24,26],         Direction::West,  Type::Rest)
-
-             .add_group(vec![19,20, 28,29],  Direction::South, Type::Rest)
-             .add_group(vec![27,30],         Direction::South, Type::Rest)
-
-             .add_group(vec![21,22, 31,34],  Direction::East,  Type::Rest)
-             .add_group(vec![32,33],         Direction::East,  Type::Rest)
-             .create_controls();
-
-        let indexed_controls = index_controls(&traffic_controls);
-
-        let crossroad = Crossroad::new(&indexed_controls);
         let mut crossroad_state = CrossroadState::AllRed;
-        let mut time = 0; // in seconden
+        let mut time = 0; // seconds
 
         let frequency_scheduler = sched::periodic_ms(1000);
 
         if true { // TESTS
-            crossroad.send_all_bulk(&out_tx, JsonState::Groen);
-            crossroad.send_all(&out_tx, JsonState::Geel);
-            crossroad.send_all_bulk(&out_tx, JsonState::Rood);
+            // crossroad.send_all_bulk(&out_tx, JsonState::Groen);
+            // crossroad.send_all(&out_tx, JsonState::Geel);
+            // crossroad.send_all_bulk(&out_tx, JsonState::Rood);
         }
 
         loop {
@@ -169,16 +176,28 @@ fn spawn_client_sensor_receiver(mut reader: BufReader<TcpStream>, sensor_data: A
         loop {
             let mut line = String::new();
 
-            //stdin.read_until(b'a', &mut buffer));
             try!(reader.read_line(&mut line));
-            //let line_trimmed = &line[0..(line.len()-1)];
             let ref mut traffic_state = *sensor_data.lock().unwrap();
 
             log_file.write(format!("\n{}\n", time::now().strftime("%T").unwrap()).as_bytes());
             log_file.write_all(&line.as_bytes());
 
-            match traffic_state.update_from_json(&line) {
-                Ok(banen_json) => println!("Client->Server: received baan sensor update: {:?}\nnew_state = {:?}", banen_json, traffic_state),
+            match serde_json::from_str::<ProtocolJson>(&line) {
+                Ok(protocol_obj) => {
+
+                    if let Some(ref banen) = protocol_obj.banen {
+
+                        if banen.len() > 0 {
+                            traffic_state.update(banen);
+                            println!("Client->Server: received baan sensor update: {:?} new_state = {:?}", banen, traffic_state)
+                        }
+                    }
+
+                    if let Some(ref busbanen) = protocol_obj.busbanen {
+                        //traffic_state.update(banen); //TODO: process busbanen
+                        println!("Client->Server: received BUSBAAN sensor update: {:?} new_state = {:?}", busbanen, traffic_state)
+                    }
+                },
                 Err(err) => println!("Client->Server: received faulty json string {:?}", line),
             }
         }

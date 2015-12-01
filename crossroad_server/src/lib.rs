@@ -11,6 +11,7 @@ extern crate permutohedron;
 pub mod traffic_protocol;
 pub mod traffic_controls;
 pub mod crossroad;
+pub mod default_crossroad;
 pub mod error;
 pub mod cartesian;
 pub mod signal_group;
