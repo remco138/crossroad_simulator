@@ -41,7 +41,7 @@ impl <'a>ControlWithState<'a>  {
             },
 
             TrafficLightState::MinimalGreen { start } => {
-                println!("****  MinimalGreen since {:?}, {:?} -> {:?}", start,  self.inner, self.state );
+                //println!("****  MinimalGreen since {:?}, {:?} -> {:?}", start,  self.inner, self.state );
 
                 if time >= start + self.inner.traffic_type().min_green() {
                     Some(TrafficLightState::Green{ start: time })
@@ -66,6 +66,7 @@ impl <'a>ControlWithState<'a>  {
                     // if: sensor is activated -> extend green time
                     // else if: check if we can move to yellow
                     if sensor_states.has_active(self.inner) {
+                        println!(":::: Extending green timer for: {:?}" ,self.inner.get_ids());
                         Some(TrafficLightState::Green{ start: time }) // reset timer
                     }
                     else if time >= start + self.inner.traffic_type().green_extra() {
@@ -79,7 +80,7 @@ impl <'a>ControlWithState<'a>  {
             },
 
             TrafficLightState::Yellow { start } => {
-                println!("****  Yellow {:?} -> {:?}, {:?} -> {:?}", start, start + YELLOW_TIME, self.inner, self.state);
+                //println!("****  Yellow {:?} -> {:?}, {:?} -> {:?}", start, start + YELLOW_TIME, self.inner, self.state);
 
                 if time >= start + YELLOW_TIME {
                     self.inner.send_unsafe(out_tx, JsonState::Rood);
@@ -101,6 +102,7 @@ impl <'a>ControlWithState<'a>  {
     }
 }
 
+
 // -------------------------------------------------------------------------------
 // Control
 // -------------------------------------------------------------------------------
@@ -110,18 +112,7 @@ pub enum Control<'a> {
     Group(TrafficGroup<'a>),
     Single(&'a TrafficLight)
 }
-/*
-impl <'a>From<&'a TrafficGroup<'a>> for Control<'a> {
-    fn from(t: &'a TrafficGroup<'a>) -> Control<'a> {
-        Control::Group(t)
-    }
-}
-impl <'a>From<&'a TrafficLight> for Control<'a> {
-    fn from(t: &'a TrafficLight) -> Control<'a> {
-        Control::Single(t)
-    }
-}
-*/
+
 impl <'a>PartialEq for Control<'a> {
     fn eq(&self, other: &Control) -> bool {
         let address_self = self as *const Control;
@@ -188,30 +179,11 @@ impl <'a>Control<'a> {
     }
 
     pub fn send_unsafe(&self, out_tx: &Sender<String>, state: JsonState) {
-        let json_str = ClientJson::from(self.json_objs(state)).serialize();
-        out_tx.send(json_str.unwrap()).unwrap()
+        let json_str = out_compat_json_str(self.json_objs(state));
+        out_tx.send(json_str).unwrap()
     }
 }
 
-// -------------------------------------------------------------------------------
-// Crossing
-// -------------------------------------------------------------------------------
-
-pub struct Crossing<'a> {
-    pub bicycle_and_pedestrain: Control<'a>,
-    pub inner_pedestrian: Control<'a>,
-    pub side: Direction,
-}
-
-impl <'a>Crossing<'a> {
-    pub fn from(bicycle_and_pedestrain: Control<'a>, inner_pedestrian: Control<'a>, side: Direction) -> Crossing<'a> {
-        Crossing {
-            bicycle_and_pedestrain: bicycle_and_pedestrain,
-            inner_pedestrian: inner_pedestrian,
-            side: side,
-        }
-    }
-}
 
 // -------------------------------------------------------------------------------
 // ControlSensor
@@ -245,6 +217,59 @@ impl <'a, 'b>fmt::Debug for ControlSensor<'a, 'b> {
     }
 }
 
+
+// -------------------------------------------------------------------------------
+// ControlsBuilder
+// -------------------------------------------------------------------------------
+
+pub struct ControlsBuilder<'a> {
+    pub tlights: &'a TrafficLightsBuilder,
+    pub groups: Vec<TrafficGroup<'a>>,
+}
+
+impl <'a>ControlsBuilder<'a> {
+    pub fn new(tlights: &'a TrafficLightsBuilder) -> ControlsBuilder<'a> {
+        ControlsBuilder { tlights: tlights, groups: vec![] }
+    }
+    pub fn add_group(mut self, ids: Vec<usize>, d: Direction, t: Type) -> Self {
+        let traffic_lights = ids.into_iter().map(|id| &self.tlights.traffic_lights[id]).collect();
+        self.groups.push(TrafficGroup::from(traffic_lights, d, t));
+        self
+    }
+
+    pub fn create_controls(self) -> Vec<Control<'a>> {
+        let mut tl_controls = self.tlights.as_controls();
+
+        // Process each group
+        for group in self.groups.into_iter() {
+
+            // Remove each id in the group from tl_controls
+            for id in group.get_ids() {
+                if let Some(index) = tl_controls.iter().position(|tlc| tlc.contains(id)) {
+                    println!("Removing tl control @ index {:?}, id: {:?}", index, id);
+                    tl_controls.remove(index);
+                }
+            }
+
+            // Add the group as a Control
+            tl_controls.push(Control::Group(group));
+        }
+
+        tl_controls
+    }
+}
+
+pub fn index_controls<'a, 'b>(input: &'b Vec<Control<'a>>) -> Vec<&'b Control<'a>> {
+    let length = input.iter().flat_map(|c| c.get_ids()).max().unwrap();
+    let mut vec = Vec::with_capacity(length);
+
+    for i in (0..length+1) {
+        vec.push(input.iter().find(|c| c.contains(i)).unwrap());
+        println!("      index {:?} = {:?}", i ,vec[i] );
+    }
+
+    vec
+}
 
 // -------------------------------------------------------------------------------
 // TrafficGroup
@@ -347,6 +372,34 @@ impl <'a>TrafficLightsBuilder {
 
 
 // -------------------------------------------------------------------------------
+// Direction
+// -------------------------------------------------------------------------------
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Direction {
+    North, East, South, West
+}
+
+impl Direction {
+    pub fn retain<'a, 'b, 'c>(&self, src: &Vec<&'c ControlSensor<'a, 'b>>) -> Vec<&'c ControlSensor<'a, 'b>> {
+        let mut vec = src.clone();
+        vec.retain(|c| c.inner.direction() == *self);
+        vec
+    }
+}
+
+pub fn directions() -> Vec<Direction> {
+    vec![Direction::North, Direction::East, Direction::South, Direction::West]
+}
+
+pub fn split_by_directions<'a, 'b, 'c>(controls: &Vec<&'c ControlSensor<'a, 'b>>) -> Vec<Vec<&'c ControlSensor<'a, 'b>>> {
+    directions().iter()
+                .map(|d| d.retain(controls))
+                .filter(|v| v.len() != 0).collect()
+}
+
+
+// -------------------------------------------------------------------------------
 // TrafficType
 // -------------------------------------------------------------------------------
 
@@ -360,19 +413,20 @@ pub enum Type {
 impl Type {
     pub fn min_green(&self) -> i32 {
         match self {
-            &Type::Primary => 7,
-            &Type::Vehicle => 7,
-            &Type::Rest => 20,
+            &Type::Primary => 5,
+            &Type::Vehicle => 5,
+            &Type::Rest => 10,
         }
     }
     pub fn green_extra(&self) -> i32 {
         match self {
             &Type::Primary => 999,//std::i32::MAX,
-            &Type::Vehicle => 7,
+            &Type::Vehicle => 3,
             &Type::Rest => 10,
         }
     }
 }
+
 
 // -------------------------------------------------------------------------------
 // Conflicts
@@ -392,12 +446,6 @@ impl<'a> XorConflictsGroup<'a> {
     pub fn get_conflicts_for(&'a self, control: &Control<'a>) ->  Option<Vec<usize>> {
         self.conflicts.iter()
             .find(|conflict| conflict.is_for(control))
-            .map( |conflict| self.get_conflicting_ids(conflict))
-    }
-
-    pub fn get_conflicts_for_id(&'a self, id: usize) ->  Option<Vec<usize>> {
-        self.conflicts.iter()
-            .find(|conflict| conflict.is_for_id(id))
             .map( |conflict| self.get_conflicting_ids(conflict))
     }
 
@@ -422,10 +470,6 @@ pub struct ConflictEntry<'a> {
 impl<'a> ConflictEntry<'a> {
     pub fn is_for(&self, other_control: &'a Control<'a>) -> bool {
         self.control.is(other_control)
-    }
-
-    pub fn is_for_id(&self, id: usize) -> bool {
-        self.control.contains(id)
     }
 
     pub fn get_conflicting_ids(&self) -> Vec<usize> {

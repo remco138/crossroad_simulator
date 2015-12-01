@@ -3,6 +3,8 @@ use traffic_controls::*;
 use error::{Result, Error, JsonError};
 use std::sync::mpsc::{channel, Sender, Receiver};
 use std::intrinsics;
+use serde_json;
+
 
 #[derive(Debug, Clone)]
 pub enum SignalGroupState {
@@ -47,7 +49,8 @@ impl<'a> SignalGroup<'a> {
 
             SignalGroupState::Start => {
                 println!("=> Starting ControlGroup");
-                out_tx.send(self.construct_bulk_json(JsonState::Groen).serialize().unwrap());
+                let json_str = out_compat_json_str(self.construct_bulk_json(JsonState::Groen));
+                out_tx.send(json_str).unwrap();
                 Some(SignalGroupState::Busy{ start: time })
             },
 
@@ -58,7 +61,7 @@ impl<'a> SignalGroup<'a> {
             },
 
             SignalGroupState::Busy { start } => {
-                println!("=> Busy {:?}", start + self.max_green);
+                println!("=> Busy {:?} {:?}", start + self.max_green, self.ids());
 
                 if self.controls_have_state(TrafficLightState::Red) {
                     Some(SignalGroupState::Done)
@@ -99,8 +102,11 @@ impl<'a> SignalGroup<'a> {
         }
     }
 
-    fn construct_bulk_json(&self, state: JsonState) -> ClientJson {
-        let all_objs = self.controls.iter().flat_map(|ref c| c.inner.json_objs(state)).collect();
-        ClientJson::from(all_objs)
+    fn construct_bulk_json(&self, state: JsonState) -> Vec<StoplichtJson> {
+        self.controls.iter().flat_map(|ref c| c.inner.json_objs(state)).collect()
+    }
+
+    fn ids(&self) -> Vec<Vec<usize>> {
+        self.controls.iter().map(|c| c.inner.get_ids()).collect()
     }
 }
