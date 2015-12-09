@@ -55,7 +55,7 @@ fn main() {
     }
 
     let ip = matches.value_of("ip").unwrap();
-    let port = matches.value_of("PORT").unwrap_or("9990");
+    let port = matches.value_of("port").unwrap_or("9990");
     let address = format!("{}:{}", ip, port);
 
     println!("\nJson compatibility level = {:?} ", j_str);
