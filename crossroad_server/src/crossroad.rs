@@ -148,7 +148,7 @@ impl<'a> Crossroad<'a> {
                         acc = acc + current_control.time_waiting(until_now);
                         conflicts.push_all(current_control.conflicting_ids.as_slice());
                         path.push(current_control.clone());
-                        print!("\n{:?} added. +{:?} seconds. New conflicts: {:?} ", current_control.inner.get_ids(), acc.num_seconds(), conflicts)
+                        //print!("\n{:?} added. +{:?} seconds. New conflicts: {:?} ", current_control.inner.get_ids(), acc.num_seconds(), conflicts)
                     }
                 }
             }

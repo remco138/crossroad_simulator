@@ -91,9 +91,6 @@ pub fn create_crossroad<'a>(traffic_controls: &'a Vec<Control<'a>>) -> Crossroad
                 &indexed_controls[8],
                 road_west_9_10,
                 &indexed_controls[11],
-
-                // &indexed_controls[15],//bus
-                // &indexed_controls[16],//bus
             ]),
         ])
     );
@@ -147,7 +144,6 @@ pub fn create_crossroad<'a>(traffic_controls: &'a Vec<Control<'a>>) -> Crossroad
                 &indexed_controls[1],
                 road_east_2_3,
                 &indexed_controls[4],
-                // &indexed_controls[16],//bus
             ]),
         ])
     );
