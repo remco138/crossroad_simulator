@@ -44,7 +44,7 @@ impl<'a> Crossroad<'a> {
             CrossroadState::AllRed => {
                 println!("========== STATE: AllRed");
 
-                if sensor_states.has_any_active(&self.priority_traffic) {
+                if sensor_states.has_any_active_bus(&self.priority_traffic) {
                     Some(CrossroadState::CreatePriorityGroup)
                 }
                 else if sensor_states.has_any_active(&self.secondary_traffic) {
@@ -74,8 +74,25 @@ impl<'a> Crossroad<'a> {
             },
 
             CrossroadState::CreatePriorityGroup => {
-                println!("========== STATE: CreatePriorityGroup");
-                None
+                println!("========== STATE: CreatePriorityGroup <-------------------------??");
+
+                let mut bus_controls = vec![];
+
+                if let Some(&bcontrol) = self.traffic_controls.get(15) {
+                    if sensor_states.has_active_bus(bcontrol) { bus_controls.push(bcontrol); }
+                }
+                if let Some(&bcontrol) = self.traffic_controls.get(16) {
+                    if sensor_states.has_active_bus(bcontrol) { bus_controls.push(bcontrol); }
+                }
+
+                if bus_controls.len() == 0 {
+                    println!("========== STATE: REDIRECT:::: ");
+                    Some(CrossroadState::CreateSignalGroup)
+                }
+                else {
+                    let group = SignalGroup::new_bus(bus_controls, false);
+                    Some(CrossroadState::SignalGroup(group))
+                }
             },
 
             CrossroadState::CreateSignalGroup => {

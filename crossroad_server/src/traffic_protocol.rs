@@ -12,7 +12,6 @@ use serde_json::error::Error as SerdeError;
 
 pub const BAAN_COUNT: usize = 35; //TODO: REMOVE
 
-
 // -------------------------------------------------------------------------------
 // Client State
 // -------------------------------------------------------------------------------
@@ -26,45 +25,65 @@ pub struct Sensor {
 
 impl Sensor {
     fn new() -> Sensor { Sensor { id: 0, bezet: false, last_update: time::empty_tm() } }
-}
 
+    pub fn update(&mut self, baan: &Baan) {
+        self.bezet = baan.bezet;
+        if baan.bezet { self.last_update = time::now(); }
+    }
+
+    pub fn update_bus(&mut self, baan: &BusBaan) {
+        self.bezet = baan.bezet;
+        if baan.bezet { self.last_update = time::now(); }
+    }
+}
 
 pub struct SensorStates {
     sensors: [Sensor; BAAN_COUNT],
+    bus_sensors: [Sensor; BAAN_COUNT],
+    current_bus_id: i32,
 }
 
 impl SensorStates {
 
     pub fn new() -> SensorStates {
-        let mut inst = SensorStates { sensors: [Sensor::new(); BAAN_COUNT] };
+        let mut inst = SensorStates {
+            sensors: [Sensor::new(); BAAN_COUNT],
+            bus_sensors: [Sensor::new(); BAAN_COUNT],
+            current_bus_id: 0,
+        };
         for i in 0..BAAN_COUNT {  inst.sensors[i].id = i; }
+        for i in 0..BAAN_COUNT {  inst.bus_sensors[i].id = i; }
         inst
     }
+
 
     pub fn has_active(&self, control: &Control) -> bool {
         control.get_ids().iter().any(|&id| self.sensors[id].bezet)
     }
-
     pub fn has_any_active(&self, controls: &Vec<&Control>) -> bool {
         controls.iter().any(|c| self.has_active(c))
     }
 
-    pub fn _debug_update_directly(&mut self, states: Vec<Sensor>) {
-        for state in states.iter() {
-            self.sensors[state.id].bezet = state.bezet;
 
-            if state.bezet {
-                self.sensors[state.id].last_update = state.last_update;
-            }
-        }
+    pub fn has_active_bus(&self, control: &Control) -> bool {
+        control.get_ids().iter().any(|&id| self.bus_sensors[id].bezet)
     }
+    pub fn has_any_active_bus(&self, controls: &Vec<&Control>) -> bool {
+        controls.iter().any(|c| self.has_active_bus(c))
+    }
+
 
     pub fn update(&mut self, banen: &Vec<Baan>) {
         for baan in banen.iter() {
-            self.sensors[baan.id].bezet = baan.bezet;
+            self.sensors[baan.id].update(baan);
+        }
+    }
+    pub fn update_bussen(&mut self, busbanen: &Vec<BusBaan>) {
+        for baan in busbanen.iter() {
+            self.bus_sensors[baan.id].update_bus(baan);
 
             if baan.bezet {
-                self.sensors[baan.id].last_update = time::now();
+                self.current_bus_id = baan.eerstvolgendelijn;
             }
         }
     }

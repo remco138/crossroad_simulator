@@ -189,13 +189,16 @@ fn spawn_client_sensor_receiver(mut reader: BufReader<TcpStream>, sensor_data: A
 
                         if banen.len() > 0 {
                             traffic_state.update(banen);
-                            println!("Client->Server: received baan sensor update: {:?} new_state = {:?}", banen, traffic_state)
+                            //println!("Client->Server: received baan sensor update: {:?} new_state = {:?}", banen, traffic_state)
                         }
                     }
 
                     if let Some(ref busbanen) = protocol_obj.busbanen {
-                        //traffic_state.update(banen); //TODO: process busbanen
-                        println!("Client->Server: received BUSBAAN sensor update: {:?} new_state = {:?}", busbanen, traffic_state)
+
+                        if busbanen.len() > 0 {
+                            traffic_state.update_bussen(busbanen);
+                            println!("Client->Server: received BUSBAAN sensor update: {:?} new_state = {:?}", busbanen, traffic_state)
+                        }
                     }
                 },
                 Err(err) => println!("Client->Server: received faulty json string {:?}", line),

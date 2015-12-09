@@ -20,6 +20,7 @@ pub struct SignalGroup<'a>  {
     pub state: SignalGroupState,
     pub unlimited_green: bool,
     pub max_green: i32,
+    pub is_bus: bool,
 }
 
 const MAX_GREEN_TEMP: i32 = 15;
@@ -32,15 +33,37 @@ impl<'a> SignalGroup<'a> {
             state: SignalGroupState::Start,
             unlimited_green: unlimited_green,
             max_green: MAX_GREEN_TEMP,
+            is_bus: false,
+        }
+    }
+    pub fn new_bus(controls: Vec<&'a Control>, unlimited_green: bool) -> SignalGroup<'a> {
+        SignalGroup {
+            controls: controls.iter().map(|c| ControlWithState::new(c)).collect(),
+            state: SignalGroupState::Start,
+            unlimited_green: unlimited_green,
+            max_green: MAX_GREEN_TEMP,
+            is_bus: true,
         }
     }
 
     pub fn empty() -> SignalGroup<'a> {
-        SignalGroup { controls: vec![], state: SignalGroupState::Start, unlimited_green: false, max_green: MAX_GREEN_TEMP, }
+        SignalGroup {
+            controls: vec![],
+            state: SignalGroupState::Start,
+            unlimited_green: false,
+            max_green: MAX_GREEN_TEMP,
+            is_bus: false,
+         }
     }
 
     pub fn clone_with(&self, state: SignalGroupState) -> SignalGroup<'a> {
-        SignalGroup { controls: self.controls.clone(), state:state, unlimited_green: self.unlimited_green, max_green: MAX_GREEN_TEMP, }
+        SignalGroup {
+            controls: self.controls.clone(),
+            state: state,
+            unlimited_green: self.unlimited_green,
+            max_green: self.max_green,
+            is_bus: self.is_bus
+        }
     }
 
     pub fn run_loop(&mut self, time: i32, out_tx: &Sender<String>, sensor_states: &SensorStates) -> Option<SignalGroupState> {
@@ -49,7 +72,10 @@ impl<'a> SignalGroup<'a> {
 
             SignalGroupState::Start => {
                 println!("=> Starting ControlGroup");
-                let json_str = out_compat_json_str(self.construct_bulk_json(JsonState::Groen));
+                let json_str = match self.is_bus {
+                    true  => out_compat_json_str(self.construct_bulk_json(JsonState::BusRechtdoorRechtsaf)),
+                    false => out_compat_json_str(self.construct_bulk_json(JsonState::Groen)),
+                };
                 out_tx.send(json_str).unwrap();
                 Some(SignalGroupState::Busy{ start: time })
             },
