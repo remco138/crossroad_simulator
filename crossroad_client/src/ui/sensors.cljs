@@ -30,6 +30,6 @@
 
                (if-let [v (first (alts! [sensors t]))]
                  (recur (conj-when-unique result v) t)
-                 (do (comment (print result)) (network/send-sensor-states! result))))
+                 (do (when-not (empty? result) (network/send-sensor-states! result)))))
 
              (recur))))

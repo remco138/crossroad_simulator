@@ -22,27 +22,27 @@
         car (js/paper.Path.Circle. (.getPointAt (:path road) 0) 5)]
     (set! (.-strokeColor car) "black")
     (set! (.-fillColor car) "black")
-    {:car car :road road :speed 1 :ahead 14 :dist 6 :collision true}))
+    {:car car :road road :speed 1 :ahead 14 :dist 3 :collision 0}))
 
 (defn random-walker [roads]
   (let [road (pick-random-road roads)
         car (js/paper.Path.Circle. (.getPointAt (:path road) 0) 2)]
     (set! (.-strokeColor car) "blue")
     (set! (.-fillColor car) "blue")
-    {:car car :road road :speed 0.07 :ahead 4 :dist 1}))
+    {:car car :road road :speed 0.07 :ahead 4 :dist 0.2 :collision 1}))
 
 (defn random-cyclist [roads]
   (let [road (pick-random-road roads)
         car (js/paper.Path.Circle. (.getPointAt (:path road) 0) 2)]
     (set! (.-strokeColor car) "green")
     (set! (.-fillColor car) "green")
-    {:car car :road road :speed 0.3 :ahead 4 :dist 2}))
+    {:car car :road road :speed 0.3 :ahead 7 :dist 0.5 :collision 2}))
 
 (defn random-bus [roads]
   (let [road (pick-random-road roads)
         car (js/paper.Path.Rectangle. (.getPointAt (:path road) 0) 17)]
     (set! (.-strokeColor car) "black")
-    {:car car :road road :speed 0.7 :ahead 18 :dist 5}))
+    {:car car :road road :speed 0.7 :ahead 18 :dist 5 :collision 3}))
 
 ;----------
 ;Car AI
@@ -79,7 +79,9 @@
 
                                   ;collision check
                                    (when-not (or (empty? dangerous-cars) (nil? future-position))
-                                     (<= 1 (count (filter (fn [x] (> (:dist car) (.-length (.subtract future-position x)))) dangerous-cars))))
+                                     (<= 1 (count (filter (fn [x] (and
+                                                                   (> (:dist car) (.-length (.subtract future-position x)))))
+                                                          dangerous-cars))))
 
                                    (and
                                     ;the traffic light allows us to move (green/orange => 1, 2)

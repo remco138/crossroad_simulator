@@ -11,7 +11,7 @@
    (def raster (js/paper.Raster. "plattegrond2.jpg"))
   (def state (atom {:roads {
                             ;"road0-0"  {:path (js/paper.Path. "m 0,218.74405 310.10976,53.39638 c 0,0 13.96521,0 18.89411,-16.01891 C 334.00915,239.85438 370.8995,1.0511003 370.8995,1.0511003")                         :light [0]}
-                            "road0-1"  {:path (js/paper.Path. "m 0,218.74405 318.32459,55.45009 c 0,0 34.17334,7.08454 49.69972,71.05826 11.50091,47.38749 -1.23222,69.00457 -2.46445,112.95389")                         :light nil}
+                            "road0-1"  {:path (js/paper.Path. "m 0,218.74405 318.32459,55.45009 c 0,0 34.17334,7.08454 49.69972,71.05826 11.50091,47.38749 -1.23222,69.00457 -2.46445,112.95389")                         :light [0]}
                             "road1"    {:path (js/paper.Path. "M 0.65134816,139.3758 C 212.96155,173.64748 449.60053,223.39674 454.35934,176.35395 461.74642,103.32967 481.01948,3.7561552 481.01948,3.7561552")          :light [1]}
                             "road2"    {:path (js/paper.Path. "M 2.5808761,151.33359 735.75964,272.33976")                                                                                                                :light [2]}
                             "road3"    {:path (js/paper.Path. "M -3.767145,159.39796 705.44943,278.24318")                                                                                                                :light [3]}
@@ -64,7 +64,7 @@
                                     "road21-4" {:path (js/paper.Path. "m 553.42186,-1.5072867 c 0,0 -34.1929,219.6301067 -43.27526,275.3352667 -4.35657,26.7203 -17.52913,33.73172 7.84182,40.66132 120.43126,32.89352 340.95716,15.76622 340.95716,15.76622") :light [34 32]}
                                        }
                     :traffic-lights {
-                                     ;0  {:point (js/paper.Path.Circle. (js/paper.Point.  329.64716  253.27734          ) 4)}
+                                     0  {:point (js/paper.Path.Circle. (js/paper.Point.  372.95322  348.94907          ) 4)}
                                      1  {:point (js/paper.Path.Circle. (js/paper.Point.  372.54248  194.71568          ) 4)}
                                      2  {:point (js/paper.Path.Circle. (js/paper.Point.  369.05115  212.37755          ) 4)}
                                      3  {:point (js/paper.Path.Circle. (js/paper.Point.  367.35428  221.35835          ) 4)}
@@ -106,7 +106,7 @@
                                      }
 ;0 {:point (js/paper.Path.Circle. (js/paper.Point. 0 0) 4) :chan (chan (dropping-buffer 1))}
                     :sensors {
-                              ;0  {:point (js/paper.Path.Circle. (js/paper.Point.  326.78836    261.55911        ) 4) :chan (chan (dropping-buffer 1))}
+                              0  {:point (js/paper.Path.Circle. (js/paper.Point.  363.9169    334.16238        ) 4) :chan (chan (dropping-buffer 1))}
                               1  {:point (js/paper.Path.Circle. (js/paper.Point.  296.34995    187.11697        ) 4) :chan (chan (dropping-buffer 4))}
                               2  {:point (js/paper.Path.Circle. (js/paper.Point.  294.29623    199.64458        ) 4) :chan (chan (dropping-buffer 4))}
                               3  {:point (js/paper.Path.Circle. (js/paper.Point.  292.85864    209.50237        ) 4) :chan (chan (dropping-buffer 4))}
@@ -150,10 +150,10 @@
 
 
 
-(def ui-state (r/atom {:speed 3 :sensor-refresh 300 :last-packed "last-packet" :connect-ip "127.0.0.1" :connect-port 9990 :display-sensors false :display-paths false}))
+(def ui-state (r/atom {:speed 3 :sensor-refresh 300 :last-packed "last-packet" :connect-ip "127.0.0.1" :connect-port 9990 :display-sensors false :display-paths false :spawn-rate 0.6}))
 
 (def cars (atom []))
-(def lights (atom [0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 2 2 2 2 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]))
+(def lights (atom [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]))
 (def cars-location-ahead (atom {}))
 
 (defn reset-light-states! [ls]

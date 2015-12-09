@@ -43,6 +43,16 @@
    [:button  {:on-click spawn-bus!} "spawn bus"]
    [:button  {:on-click spawn-cyclist!} "spawn cyclist"]
    [:br]
+   [:span "spawn every: "]
+   [:input {:type "range"
+            :value (:spawn-rate @state/ui-state)
+            :min 0.1
+            :max 5
+            :step 0.1
+            :name "rate-slider"
+            :on-change (fn [x]
+                         (swap! state/ui-state assoc :spawn-rate (-> x .-target .-value js/parseFloat)))}]
+   [:br]
    [:button  {:on-click #(network/connect! 9990)} "(re)connect"]
    [:button  {:on-click #(network/send! "ayyyyy\r\n")} "send data"]
    [:br]
@@ -51,13 +61,13 @@
             :value (:connect-ip @state/ui-state)
             :name "ip"
             :on-change (fn [x]
-                         (swap! state/ui-state assoc :connect-ip (-> x .-target .-value .parseInt)))}]
+                         (swap! state/ui-state assoc :connect-ip (-> x .-target .-value)))}]
    [:input {:type "text"
             :value (:connect-port @state/ui-state)
             :name "port"
             :on-change (fn [x]
                          (swap! state/ui-state assoc :connect-port (-> x .-target .-value)))}]
-   [:button {:on-click #(network/connect! (@state/ui-state :connect-ip) (@state/ui-state :connect-port))}
+   [:button {:on-click #(network/connect! (@state/ui-state :connect-ip) (@state/ui-state :connect-port)  )}
     "connect!"]
 
    [:span "show sensors"]
