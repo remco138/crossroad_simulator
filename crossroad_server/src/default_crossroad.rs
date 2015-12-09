@@ -48,28 +48,38 @@ pub fn create_crossroad<'a>(traffic_controls: &'a Vec<Control<'a>>) -> Crossroad
     let mut directions = HashMap::new();
     directions.insert(Direction::North,
         XorConflictsGroup::new("noord".to_string(), vec![
-            indexed_controls[11].conflicting_with(vec![]),
+            indexed_controls[11].conflicting_with(vec![
+                east_bicycle_and_pedestrain
+            ]),
             indexed_controls[6].conflicting_with(vec![
                 &indexed_controls[8], road_west_9_10,    // noord A
                 &indexed_controls[12],                   // noord B
                 road_east_2_3,
+
+                south_bicycle_and_pedestrain
             ]),
             indexed_controls[1].conflicting_with(vec![
                 &indexed_controls[8], road_west_9_10,    // noord A
                 &indexed_controls[12],                   // noord B
                 &indexed_controls[13],
                 &indexed_controls[5],
+
+                west_bicycle_and_pedestrain
             ]),
         ])
     );
 
     directions.insert(Direction::East,
         XorConflictsGroup::new("oost".to_string(), vec![
-            indexed_controls[7].conflicting_with(vec![]),
+            indexed_controls[7].conflicting_with(vec![
+                south_bicycle_and_pedestrain
+            ]),
             road_east_2_3.conflicting_with(vec![
                 &indexed_controls[5], &indexed_controls[6], // oost A
                 &indexed_controls[8],                       // oost B
-                &indexed_controls[13]
+                &indexed_controls[13],
+
+                west_bicycle_and_pedestrain
             ]),
             indexed_controls[12].conflicting_with(vec![
                 &indexed_controls[5], &indexed_controls[6], // oost A
@@ -81,13 +91,18 @@ pub fn create_crossroad<'a>(traffic_controls: &'a Vec<Control<'a>>) -> Crossroad
                 &indexed_controls[8],
                 road_west_9_10,
                 &indexed_controls[11],
+
+                // &indexed_controls[15],//bus
+                // &indexed_controls[16],//bus
             ]),
         ])
     );
 
     directions.insert(Direction::South,
         XorConflictsGroup::new("zuid".to_string(), vec![
-            indexed_controls[4].conflicting_with(vec![]),
+            indexed_controls[4].conflicting_with(vec![
+                west_bicycle_and_pedestrain
+            ]),
             indexed_controls[13].conflicting_with(vec![
                 &indexed_controls[1], road_east_2_3,    // zuid A
                 &indexed_controls[5],                   // zuid B
@@ -97,7 +112,9 @@ pub fn create_crossroad<'a>(traffic_controls: &'a Vec<Control<'a>>) -> Crossroad
                 &indexed_controls[1], road_east_2_3,    // zuid A
                 &indexed_controls[5],                   // zuid B
                 &indexed_controls[6],
-                &indexed_controls[12]
+                &indexed_controls[12],
+
+                east_bicycle_and_pedestrain,
             ]),
             south_bicycle_and_pedestrain.conflicting_with(vec![
                 &indexed_controls[5],
@@ -114,18 +131,23 @@ pub fn create_crossroad<'a>(traffic_controls: &'a Vec<Control<'a>>) -> Crossroad
             road_west_9_10.conflicting_with(vec![
                 &indexed_controls[12], &indexed_controls[13], // west A
                 &indexed_controls[1],                         // west B
-                &indexed_controls[6]
+                &indexed_controls[6],
+
+                east_bicycle_and_pedestrain
             ]),
             indexed_controls[5].conflicting_with(vec![
                 &indexed_controls[12], &indexed_controls[13], // west A
                 &indexed_controls[1],                         // west B
                 road_east_2_3,
-                &indexed_controls[8]
+                &indexed_controls[8],
+
+                south_bicycle_and_pedestrain
             ]),
             west_bicycle_and_pedestrain.conflicting_with(vec![
                 &indexed_controls[1],
                 road_east_2_3,
                 &indexed_controls[4],
+                // &indexed_controls[16],//bus
             ]),
         ])
     );
