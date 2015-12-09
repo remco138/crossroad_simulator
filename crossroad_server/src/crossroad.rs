@@ -138,8 +138,8 @@ impl<'a> Crossroad<'a> {
             let mut path = vec![];
             let mut acc = time::Duration::zero();
 
-            print!("\nchecking control path: ");
-            for c in &control_path { print!("{:?} ", c.inner.get_ids()) };
+            //print!("\nchecking control path: ");
+            //for c in &control_path { print!("{:?} ", c.inner.get_ids()) };
 
             for current_control in &control_path {
                 match current_control.inner.contains_one_of(&conflicts) {
