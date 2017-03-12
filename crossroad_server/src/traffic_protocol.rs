@@ -95,15 +95,13 @@ impl SensorStates {
     pub fn active_and_longest_waiting(&self) -> Option<(&Sensor, Vec<&Sensor>)> {
         let mut active_sensors = self.active_sensors();
 
-// TODOFIX
-        // active_sensors.iter()
-        //     .map(|x|*x)
-        //     .min_by(|b| b.last_update)
-        //     .map(|longest_waiting| {
-        //         active_sensors.retain(|&s| s.id != longest_waiting.id);
-        //         (longest_waiting, active_sensors)
-        //     })
-        None
+        active_sensors.iter()
+            .map(|x|*x)
+            .min_by_key(|b| b.last_update)
+            .map(|longest_waiting| {
+                active_sensors.retain(|&s| s.id != longest_waiting.id);
+                (longest_waiting, active_sensors)
+            })
     }
 }
 
