@@ -19461,18 +19461,17 @@ cljs.core.ns_name = function(a) {
   return a.name;
 };
 var electron = {core:{}};
-electron.core.app = require("app");
-electron.core.browser_window = require("browser-window");
-electron.core.crash_reporter = require("crash-reporter");
+electron.core.electron = require("electron");
+electron.core.app = electron.core.electron.app;
+electron.core.browser_window = electron.core.electron.BrowserWindow;
 electron.core.main_window = cljs.core.atom.call(null, null);
 electron.core.init_browser = function() {
   cljs.core.reset_BANG_.call(null, electron.core.main_window, new electron.core.browser_window(cljs.core.clj__GT_js.call(null, new cljs.core.PersistentArrayMap(null, 2, [new cljs.core.Keyword(null, "width", "width", -384071477), 800, new cljs.core.Keyword(null, "height", "height", 1025178622), 600], null))));
-  cljs.core.deref.call(null, electron.core.main_window).loadUrl([cljs.core.str("file://"), cljs.core.str(__dirname), cljs.core.str("/public/index.html")].join(""));
+  cljs.core.deref.call(null, electron.core.main_window).loadURL([cljs.core.str("file://"), cljs.core.str(__dirname), cljs.core.str("/public/index.html")].join(""));
   return cljs.core.deref.call(null, electron.core.main_window).on("closed", function() {
     return cljs.core.reset_BANG_.call(null, electron.core.main_window, null);
   });
 };
-electron.core.crash_reporter.start();
 electron.core.app.on("window-all-closed", function() {
   return cljs.core._EQ_.call(null, process.platform, "darwin") ? null : electron.core.app.quit();
 });

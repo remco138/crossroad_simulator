@@ -4,8 +4,9 @@
    [cljs.nodejs :as node]))
 
 (defn only-node [f]
-  (when-not (undefined? cljs.nodejs) (f)))
+  (when (exists? js/window.process) (f)))
 
+(defn nodejs? [] (exists? js/window.process))
 
 (only-node #(def net (node/require "net")))
 
@@ -25,7 +26,9 @@
   (swap! state/ui-state assoc :last-packet data)
   ;(print (:last-packet @state/ui-state))
   (when-not (nil? @client)
-    (.write @client data)))
+    (if (nodejs?)
+      (.write @client data)
+      (.send @client data))))
 
 
 (defn send-sensor-states! [xs]
@@ -46,19 +49,49 @@
     ))
 
 
-(defn connect!
+(defn connect-websocket!
   ([port]
-   (do (print "connecting..")
+   (do (print "connecting websocket..")
+     (reset! client (js/WebSocket. (str "ws://127.0.0.1:" port)))
+     ;(.on @client "connect" on-connect)
+     (set! (.-onmessage @client) #(on-data (.-data %)))
+      ;encoding is utf8 by default for websockets
+     ))
+  ([ip port]
+   (do (print "connecting2 websocket..")
+     (reset! client (js/WebSocket. (str "ws://" ip ":" port)))
+     ;(.on @client "connect" on-connect)
+     (set! (.-onmessage @client) #(on-data (.-data %)))
+      ;encoding is utf8 by default for websockets
+   )
+  )
+)
+
+
+(defn connect-socket!
+  ([port]
+   (do (print "connecting socket..")
      (reset! client (.createConnection net port))
      (.on @client "connect" on-connect)
      (.on @client "data" on-data)
      (.setEncoding @client "utf8")
      ))
   ([ip port]
-   (do (print "connecting2..")
+   (do (print "connecting2 socket..")
      (reset! client (.createConnection net port ip))
      (.on @client "connect" on-connect)
-     (.on @client "data" on-data))
+     (.on @client "data" on-data)
      (.setEncoding @client "utf8")
    )
   )
+)
+
+(defn connect!
+  ([port]
+   (if (nodejs?)
+     (connect-socket! port)
+     (connect-websocket! port)))
+  ([ip port]
+   (if (nodejs?)
+     (connect-socket! port)
+     (connect-websocket! ip port))))
