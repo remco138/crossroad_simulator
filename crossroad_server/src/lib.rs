@@ -1,7 +1,8 @@
-#![feature(core_intrinsics, drain, custom_derive, plugin, custom_attribute, box_syntax, iter_cmp, convert, vec_push_all)]
-#![plugin(serde_macros)]
-#![allow(unused_imports)]
+#![feature(core_intrinsics, custom_derive, plugin, custom_attribute, box_syntax)]
+#![allow(unused_variables, unused_imports)]
 
+#[macro_use]
+extern crate serde_derive;
 extern crate serde_json;
 extern crate serde;
 extern crate time;

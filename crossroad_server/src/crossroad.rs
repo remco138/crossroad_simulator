@@ -1,16 +1,12 @@
 use traffic_protocol::*;
 use traffic_controls::*;
 use signal_group::*;
-use error::{Result, Error, JsonError};
-use serde_json;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
-use std::sync::mpsc::{channel, Sender, Receiver};
+use std::sync::mpsc::{Sender};
 use time;
 use cartesian;
-use std::ops::Deref;
-
 
 pub enum CrossroadState<'a> {
     AllRed,
@@ -163,7 +159,7 @@ impl<'a> Crossroad<'a> {
                     true  => { print!("\n{:?} is conflicting, ignore", current_control.inner.get_ids()) },
                     false => {
                         acc = acc + current_control.time_waiting(until_now);
-                        conflicts.push_all(current_control.conflicting_ids.as_slice());
+                        conflicts.extend_from_slice(current_control.conflicting_ids.as_slice());
                         path.push(current_control.clone());
                         //print!("\n{:?} added. +{:?} seconds. New conflicts: {:?} ", current_control.inner.get_ids(), acc.num_seconds(), conflicts)
                     }
@@ -180,11 +176,13 @@ impl<'a> Crossroad<'a> {
              print!("\n");
          }
 
-         path_results.iter()
-            .max_by(|&&(ref path, count)| count)
-            .map(|&(ref path, count)| {
-                path.iter().map(|&c| c.clone()).collect()
-            })
+         //TODOFIX
+        //  path_results.iter()
+        //     .max_by(|&&(ref path, count)| count)
+        //     .map(|&(ref path, count)| {
+        //         path.iter().map(|&c| c.clone()).collect()
+        //     })
+        None
     }
 
     fn fill_signal_group<'b>(&'a self, control: &ControlSensor<'a, 'b>,
@@ -195,7 +193,7 @@ impl<'a> Crossroad<'a> {
 
         if let &Some(ref compatible_controls) = compatibles {
             let inners: Vec<_> = compatible_controls.iter().map(|c| c.inner).collect();
-            traffic_controls.push_all(inners.as_slice());
+            traffic_controls.extend_from_slice(inners.as_slice());
         }
 
         SignalGroup::new(traffic_controls, false)

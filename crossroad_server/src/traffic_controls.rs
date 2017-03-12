@@ -1,9 +1,5 @@
-use error::{Result, Error, JsonError};
-use serde::de;
-use serde_json;
 use std::fmt;
 use time;
-use std::collections::HashMap;
 use crossroad::*;
 use traffic_protocol::*;
 use std::sync::mpsc::{channel, Sender, Receiver};

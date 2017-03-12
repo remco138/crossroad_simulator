@@ -1,9 +1,7 @@
 use traffic_protocol::*;
 use traffic_controls::*;
-use error::{Result, Error, JsonError};
-use std::sync::mpsc::{channel, Sender, Receiver};
+use std::sync::mpsc::{Sender};
 use std::intrinsics;
-use serde_json;
 
 
 #[derive(Debug, Clone)]

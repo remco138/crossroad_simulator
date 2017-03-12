@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use traffic_protocol::*;
 use traffic_controls::*;
 use signal_group::*;
 use crossroad::*;

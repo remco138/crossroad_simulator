@@ -1,5 +1,4 @@
 #![allow(dead_code, unused_variables, unused_imports, unused_must_use,)]
-#![feature(ip_addr)]
 
 #[macro_use]
 extern crate clap;
@@ -49,7 +48,7 @@ fn main() {
     let j_str = matches.value_of("json").unwrap_or("none");
     match JsonCompatLevel::from_str(&j_str) {
         Some(compat_level) => unsafe {
-            crossroad_server::traffic_protocol::json_compat_level = compat_level;
+            crossroad_server::traffic_protocol::JSON_COMPAT_LEVEL = compat_level;
         },
         None => println!("Incorrect -j value!"),
     }

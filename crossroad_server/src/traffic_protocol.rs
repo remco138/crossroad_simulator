@@ -95,13 +95,15 @@ impl SensorStates {
     pub fn active_and_longest_waiting(&self) -> Option<(&Sensor, Vec<&Sensor>)> {
         let mut active_sensors = self.active_sensors();
 
-        active_sensors.iter()
-            .map(|x|*x)
-            .min_by(|b| b.last_update)
-            .map(|longest_waiting| {
-                active_sensors.retain(|&s| s.id != longest_waiting.id);
-                (longest_waiting, active_sensors)
-            })
+// TODOFIX
+        // active_sensors.iter()
+        //     .map(|x|*x)
+        //     .min_by(|b| b.last_update)
+        //     .map(|longest_waiting| {
+        //         active_sensors.retain(|&s| s.id != longest_waiting.id);
+        //         (longest_waiting, active_sensors)
+        //     })
+        None
     }
 }
 
@@ -119,7 +121,7 @@ impl fmt::Debug for SensorStates {
 // Protocol: All in 1 Json
 // -------------------------------------------------------------------------------
 
-pub static mut json_compat_level: JsonCompatLevel = JsonCompatLevel::None; //plsnostatic :|
+pub static mut JSON_COMPAT_LEVEL: JsonCompatLevel = JsonCompatLevel::None; //plsnostatic :|
 
 pub enum JsonCompatLevel {
     None, Null, Empty,
@@ -164,7 +166,7 @@ pub fn out_compat_json_str(stoplichten: Vec<StoplichtJson>) -> String {
     let json_obj = ClientJson::new(stoplichten);
 
     unsafe {
-        match json_compat_level {
+        match JSON_COMPAT_LEVEL {
             JsonCompatLevel::None  => serde_json::to_string(&json_obj),
             JsonCompatLevel::Null  => serde_json::to_string(&ProtocolJson::vec_is_null(json_obj)),
             JsonCompatLevel::Empty => serde_json::to_string(&ProtocolJson::vec_is_empty(json_obj)),
