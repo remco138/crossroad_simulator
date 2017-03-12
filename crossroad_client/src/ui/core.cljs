@@ -53,7 +53,7 @@
             :on-change (fn [x]
                          (swap! state/ui-state assoc :spawn-rate (-> x .-target .-value js/parseFloat)))}]
    [:br]
-   [:button  {:on-click #(network/connect! 9990)} "(re)connect"]
+   [:button  {:on-click #(network/connect! (:connect-port @state/ui-state))} "(re)connect"]
    [:button  {:on-click #(network/send! "ayyyyy\r\n")} "send data"]
    [:br]
 
@@ -115,8 +115,8 @@
   (js/paper.setup(js/document.getElementById "mycanvas"))
   (set! js/paper.view.onFrame (var drawing/on-frame))
   ;(network/connect!  "127.0.0.1" 9990)
-
-
+  
+  (swap! state/ui-state assoc :connect-port "9080")
   (state/init!)
   (drawing/init!)
   (sensors/track-sensors!))

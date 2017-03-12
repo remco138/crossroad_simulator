@@ -39,6 +39,8 @@
   (print "we might have connected to the server and sent our greetings!"))
 
 (defn on-data [data]
+(print "onmessage")
+(.log js/console data)
   (when (< 5 (.-length data))
     (let [until (.search data "\r\n")
           splitted (.substring data 0 until)]
@@ -53,15 +55,17 @@
   ([port]
    (do (print "connecting websocket..")
      (reset! client (js/WebSocket. (str "ws://127.0.0.1:" port)))
+     (set! (.-binaryType @client) "arraybuffer")
      ;(.on @client "connect" on-connect)
-     (set! (.-onmessage @client) #(on-data (.-data %)))
+     (set! (.-onmessage @client) #(on-data (.decode (js/TextDecoder.) (.-data %))))
       ;encoding is utf8 by default for websockets
      ))
   ([ip port]
    (do (print "connecting2 websocket..")
      (reset! client (js/WebSocket. (str "ws://" ip ":" port)))
+     (set! (.-binaryType @client) "arraybuffer")
      ;(.on @client "connect" on-connect)
-     (set! (.-onmessage @client) #(on-data (.-data %)))
+     (set! (.-onmessage @client) #(on-data (.decode (js/TextDecoder.) (.-data %))))
       ;encoding is utf8 by default for websockets
    )
   )
