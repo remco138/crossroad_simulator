@@ -175,14 +175,12 @@ impl<'a> Crossroad<'a> {
              for c in path { print!("{:?} ", c.inner.get_ids()) };
              print!("\n");
          }
-
-         //TODOFIX
-        //  path_results.iter()
-        //     .max_by(|&&(ref path, count)| count)
-        //     .map(|&(ref path, count)| {
-        //         path.iter().map(|&c| c.clone()).collect()
-        //     })
-        None
+         
+         path_results.iter()
+            .max_by_key(|&&(ref path, count)| count)
+            .map(|&(ref path, count)| {
+                path.iter().map(|&c| c.clone()).collect()
+            })
     }
 
     fn fill_signal_group<'b>(&'a self, control: &ControlSensor<'a, 'b>,
