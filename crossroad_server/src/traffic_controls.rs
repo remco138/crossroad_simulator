@@ -259,7 +259,7 @@ pub fn index_controls<'a, 'b>(input: &'b Vec<Control<'a>>) -> Vec<&'b Control<'a
     let length = input.iter().flat_map(|c| c.get_ids()).max().unwrap();
     let mut vec = Vec::with_capacity(length);
 
-    for i in (0..length+1) {
+    for i in 0..length+1 {
         vec.push(input.iter().find(|c| c.contains(i)).unwrap());
         println!("      index {:?} = {:?}", i ,vec[i] );
     }
@@ -357,7 +357,7 @@ impl <'a>TrafficLightsBuilder {
         self
     }
     pub fn set_type_range(mut self, t: Type, from: usize, to: usize) -> TrafficLightsBuilder {
-        for id in (from..to) { self.traffic_lights[id].traffic_type = t }
+        for id in from..to { self.traffic_lights[id].traffic_type = t }
         self
     }
 
